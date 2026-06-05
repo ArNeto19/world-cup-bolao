@@ -27,6 +27,7 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import HomeIcon from "@mui/icons-material/Home";
+import Close from "@mui/icons-material/Close";
 import GroupsIcon from "@mui/icons-material/Groups";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import SportsSoccerIcon from "@mui/icons-material/SportsSoccer";
@@ -190,10 +191,10 @@ const Layout = () => {
           {isMobile && (
             <IconButton
               edge="start"
-              onClick={() => setDrawerOpen(true)}
+              onClick={() => setDrawerOpen(!drawerOpen)}
               sx={{ color: "text.primary" }}
             >
-              <MenuIcon />
+              {drawerOpen ? <Close /> : <MenuIcon />}
             </IconButton>
           )}
 
