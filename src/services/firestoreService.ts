@@ -15,7 +15,7 @@ import {
   writeBatch,
   Timestamp,
 } from "firebase/firestore";
-import { db, auth } from "./firebase";
+import { db } from "./firebase";
 import {
   BolaoGroup,
   GroupMember,
