@@ -6,8 +6,8 @@ Aplicação web para bolão de palpites da Copa do Mundo 2026, com autenticaçã
 
 ## Stack
 
-- **React 18 + TypeScript + Vite**
-- **Material UI (MUI v5)**
+- **React 19 + TypeScript + Vite**
+- **Material UI (MUI v6)**
 - **Firebase** (plano Spark/free):
   - Authentication (Google OAuth)
   - Firestore (banco em tempo real)
