@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -11,7 +11,12 @@ import {
   CircularProgress,
   useMediaQuery,
   useTheme,
+  TextField,
+  InputAdornment,
+  IconButton,
 } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 import { useMatches } from "../../store/MatchesContext";
 import { PHASE_LABELS, PHASE_ORDER } from "../../data/matches";
 import { TeamFlag } from "../../components/TeamFlag";
@@ -19,10 +24,32 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const MatchesPage = () => {
-  const { matchesByPhase, loading } = useMatches();
+  const { matchesByPhase, matches, loading } = useMatches();
   const [phase, setPhase] = useState("group_stage");
+  const [search, setSearch] = useState("");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const normalise = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
+  const query = normalise(search);
+
+  // When a search is active, show results across all phases; otherwise filter by selected tab
+  const filteredMatches = useMemo(() => {
+    if (!query) return matchesByPhase[phase] ?? [];
+    return matches.filter(
+      (m) =>
+        normalise(m.homeTeam.name).includes(query) ||
+        normalise(m.awayTeam.name).includes(query) ||
+        m.homeTeam.code.toLowerCase().includes(query) ||
+        m.awayTeam.code.toLowerCase().includes(query),
+    );
+  }, [query, matches, matchesByPhase, phase]);
 
   const phases = PHASE_ORDER.filter(
     (p) => (matchesByPhase[p]?.length ?? 0) > 0,
@@ -45,27 +72,88 @@ const MatchesPage = () => {
         Partidas — Copa 2026
       </Typography>
 
-      <Tabs
-        value={phase}
-        onChange={(_, v) => setPhase(v)}
-        variant="scrollable"
-        scrollButtons="auto"
-        sx={{ mb: 2, mx: { xs: -1.5, md: 0 } }}
-      >
-        {phases.map((p) => (
-          <Tab
-            key={p}
-            value={p}
-            label={PHASE_LABELS[p]}
-            sx={{ fontSize: { xs: 11, sm: 13 } }}
-          />
-        ))}
-      </Tabs>
+      {/* Search input */}
+      <TextField
+        placeholder="Buscar por seleção…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        size="small"
+        fullWidth
+        autoComplete="off"
+        sx={{ mb: 2 }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon fontSize="small" sx={{ color: "text.secondary" }} />
+            </InputAdornment>
+          ),
+          endAdornment: search ? (
+            <InputAdornment position="end">
+              <IconButton size="small" onClick={() => setSearch("")} edge="end">
+                <ClearIcon fontSize="small" />
+              </IconButton>
+            </InputAdornment>
+          ) : null,
+        }}
+      />
+
+      {/* Phase tabs — hidden while searching */}
+      {!query && (
+        <Tabs
+          value={phase}
+          onChange={(_, v) => setPhase(v)}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{ mb: 2, mx: { xs: -1.5, md: 0 } }}
+        >
+          {phases.map((p) => (
+            <Tab
+              key={p}
+              value={p}
+              label={PHASE_LABELS[p]}
+              sx={{ fontSize: { xs: 11, sm: 13 } }}
+            />
+          ))}
+        </Tabs>
+      )}
+
+      {/* Search result header */}
+      {query && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          {filteredMatches.length === 0
+            ? "Nenhuma partida encontrada."
+            : `${filteredMatches.length} partida${filteredMatches.length !== 1 ? "s" : ""} encontrada${filteredMatches.length !== 1 ? "s" : ""}`}
+        </Typography>
+      )}
 
       <Stack spacing={1.5}>
-        {(matchesByPhase[phase] ?? []).map((m) => {
+        {filteredMatches.map((m) => {
           const isLive = m.status === "live";
           const isFinished = m.status === "finished";
+
+          // Highlight matched team name
+          const highlight = (name: string) => {
+            if (!query) return name;
+            const idx = normalise(name).indexOf(query);
+            if (idx === -1) return name;
+            return (
+              <>
+                {name.slice(0, idx)}
+                <Box
+                  component="span"
+                  sx={{
+                    bgcolor: "rgba(0,200,83,0.25)",
+                    borderRadius: 0.5,
+                    px: 0.25,
+                  }}
+                >
+                  {name.slice(idx, idx + query.length)}
+                </Box>
+                {name.slice(idx + query.length)}
+              </>
+            );
+          };
+
           return (
             <Card
               key={m.id}
@@ -79,7 +167,7 @@ const MatchesPage = () => {
                   p: { xs: "10px 12px !important", sm: "14px 16px !important" },
                 }}
               >
-                {/* Top row: group label + status + date */}
+                {/* Top row */}
                 <Box
                   sx={{
                     display: "flex",
@@ -91,7 +179,24 @@ const MatchesPage = () => {
                   }}
                 >
                   <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
-                    {m.groupName && (
+                    {/* Show phase chip when searching across phases */}
+                    {query && (
+                      <Chip
+                        label={PHASE_LABELS[m.phase]}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: 10, height: 18 }}
+                      />
+                    )}
+                    {m.groupName && !query && (
+                      <Chip
+                        label={m.groupName}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: 10, height: 18 }}
+                      />
+                    )}
+                    {m.groupName && query && (
                       <Chip
                         label={m.groupName}
                         size="small"
@@ -133,7 +238,7 @@ const MatchesPage = () => {
                   </Typography>
                 </Box>
 
-                {/* Teams row */}
+                {/* Teams */}
                 <Box
                   sx={{
                     display: "flex",
@@ -142,7 +247,6 @@ const MatchesPage = () => {
                     gap: { xs: 1, sm: 2 },
                   }}
                 >
-                  {/* Home */}
                   <Box
                     sx={{
                       display: "flex",
@@ -156,8 +260,9 @@ const MatchesPage = () => {
                       fontWeight={700}
                       fontSize={{ xs: 13, sm: 15 }}
                       noWrap
+                      textAlign="right"
                     >
-                      {m.homeTeam.name}
+                      {highlight(m.homeTeam.name)}
                     </Typography>
                     <TeamFlag
                       countryCode={m.homeTeam.flagCode}
@@ -165,7 +270,6 @@ const MatchesPage = () => {
                     />
                   </Box>
 
-                  {/* Score / VS */}
                   <Box
                     sx={{
                       textAlign: "center",
@@ -192,7 +296,6 @@ const MatchesPage = () => {
                     )}
                   </Box>
 
-                  {/* Away */}
                   <Box
                     sx={{
                       display: "flex",
@@ -210,7 +313,7 @@ const MatchesPage = () => {
                       fontSize={{ xs: 13, sm: 15 }}
                       noWrap
                     >
-                      {m.awayTeam.name}
+                      {highlight(m.awayTeam.name)}
                     </Typography>
                   </Box>
                 </Box>
