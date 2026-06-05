@@ -50,7 +50,7 @@ service cloud.firestore {
       allow read: if isAuth();
       // create/update own prediction only if match hasn't started (enforced client-side too)
       allow create, update: if isAuth()
-        && request.resource.data.userId == uid();
+        && request.resource.data.userId == uid() || isAdmin();
       allow delete: if isAdmin();
     }
   }
