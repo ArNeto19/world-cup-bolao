@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── helpers ──────────────────────────────────────────────────────────────
+    function isAuth() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function isAdmin() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(uid())).data.role == 'admin';
+    }
+    function isMember(groupId) {
+      return isAuth() &&
+        exists(/databases/$(database)/documents/groups/$(groupId)/members/$(uid()));
+    }
+
+    // ── users ─────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && uid() == userId;
+      allow update: if (isAuth() && uid() == userId)
+                    || isAdmin(); // admin can set role
+    }
+
+    // ── groups ────────────────────────────────────────────────────────────────
+    match /groups/{groupId} {
+      allow read, create, update: if isAuth();
+      allow delete: if isAdmin();
+
+      // members subcollection
+      match /members/{memberId} {
+        allow read: if isAuth();
+        // join: only the user themselves
+        allow create: if isAuth() && uid() == memberId;
+        // leave: user themselves or admin
+        allow delete: if (isAuth() && uid() == memberId) || isAdmin();
+        // score updates: admin only (triggered server-side by score recalc)
+        allow update: if isAdmin();
+      }
+    }
+
+    // ── matches ───────────────────────────────────────────────────────────────
+    match /matches/{matchId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ── predictions ───────────────────────────────────────────────────────────
+    match /predictions/{predId} {
+      allow read: if isAuth();
+      // create/update own prediction only if match hasn't started (enforced client-side too)
+      allow create, update: if isAuth()
+        && request.resource.data.userId == uid();
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="ballGrad" cx="38%" cy="32%" r="60%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#e8e8e8"/>
+      <stop offset="100%" stop-color="#c0c0c0"/>
+    </radialGradient>
+    <radialGradient id="shineGrad" cx="35%" cy="30%" r="40%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.8)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+    <clipPath id="ballClip">
+      <circle cx="32.0" cy="32.0" r="30.0"/>
+    </clipPath>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.35)"/>
+    </filter>
+  </defs>
+
+  <!-- Ball base -->
+  <circle cx="32.0" cy="32.0" r="30.0" fill="url(#ballGrad)" filter="url(#shadow)"/>
+
+  <!-- Black patches clipped to ball -->
+  <g clip-path="url(#ballClip)" fill="#1a1a1a">
+    <polygon points="32.00,25.40 38.28,29.96 35.88,37.34 28.12,37.34 25.72,29.96"/>
+    <polygon points="32.00,11.00 38.28,15.56 35.88,22.94 28.12,22.94 25.72,15.56"/><polygon points="51.97,25.51 49.57,32.89 41.82,32.89 39.42,25.51 45.70,20.95"/><polygon points="44.34,48.99 36.58,48.99 34.19,41.61 40.46,37.05 46.74,41.61"/><polygon points="19.66,48.99 17.26,41.61 23.54,37.05 29.81,41.61 27.42,48.99"/><polygon points="12.03,25.51 18.30,20.95 24.58,25.51 22.18,32.89 14.43,32.89"/>
+    <polygon points="49.76,7.56 51.79,13.83 46.46,17.71 41.12,13.83 43.16,7.56"/><polygon points="60.73,41.34 55.40,45.21 50.06,41.34 52.10,35.06 58.69,35.06"/><polygon points="32.00,62.21 26.66,58.33 28.70,52.06 35.30,52.06 37.34,58.33"/><polygon points="3.27,41.34 5.31,35.06 11.90,35.06 13.94,41.34 8.60,45.21"/><polygon points="14.24,7.56 20.84,7.56 22.88,13.83 17.54,17.71 12.21,13.83"/>
+  </g>
+
+  <!-- Shine overlay -->
+  <circle cx="32.0" cy="32.0" r="30.0" fill="url(#shineGrad)" clip-path="url(#ballClip)"/>
+
+  <!-- Ball outline -->
+  <circle cx="32.0" cy="32.0" r="30.0" fill="none" stroke="#888" stroke-width="0.8"/>
+</svg>
