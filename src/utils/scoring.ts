@@ -37,16 +37,27 @@ export function calculateScore(
   return { exactScore, goalDiff, winner, draw, points };
 }
 
-/** Returns whether predictions can still be edited (>5 min before kickoff) */
+/**
+ * Returns whether predictions can still be edited.
+ * Cutoff: 5 minutes before kick-off.
+ * Pass `now` explicitly so callers driven by useNow() stay reactive.
+ */
 export function canEditPrediction(
   matchStartTime: Date,
   status: MatchStatus,
+  now: Date = new Date(),
 ): boolean {
   const cutoff = new Date(matchStartTime.getTime() - 5 * 60 * 1000);
-  return new Date() < cutoff && status === "scheduled";
+  return now < cutoff && status === "scheduled";
 }
 
-/** Returns whether predictions of other users can be seen (match has started) */
-export function canSeePredictions(matchStartTime: Date): boolean {
-  return new Date() >= matchStartTime;
+/**
+ * Returns whether other users' predictions can be seen (match has started).
+ * Pass `now` explicitly so callers driven by useNow() stay reactive.
+ */
+export function canSeePredictions(
+  matchStartTime: Date,
+  now: Date = new Date(),
+): boolean {
+  return now >= matchStartTime;
 }
