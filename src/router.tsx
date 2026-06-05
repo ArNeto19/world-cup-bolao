@@ -52,7 +52,6 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: "groups", element: <GroupsPage /> },
       { path: "groups/:groupId", element: <GroupDetailPage /> },
-      { path: "my-groups", element: <GroupsPage /> },
       { path: "matches", element: <MatchesPage /> },
       { path: "profile", element: <ProfilePage /> },
       {

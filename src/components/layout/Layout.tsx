@@ -29,7 +29,6 @@ import MenuIcon from "@mui/icons-material/Menu";
 import HomeIcon from "@mui/icons-material/Home";
 import Close from "@mui/icons-material/Close";
 import GroupsIcon from "@mui/icons-material/Groups";
-import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import SportsSoccerIcon from "@mui/icons-material/SportsSoccer";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
@@ -43,7 +42,6 @@ const navItems = [
   { label: "Início", path: "/", icon: <HomeIcon /> },
   { label: "Grupos", path: "/groups", icon: <GroupsIcon /> },
   { label: "Partidas", path: "/matches", icon: <SportsSoccerIcon /> },
-  { label: "Ranking", path: "/my-groups", icon: <EmojiEventsIcon /> },
 ];
 
 const Layout = () => {
