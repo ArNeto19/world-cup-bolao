@@ -30,7 +30,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "../../store/AuthContext";
 import { useMatches } from "../../store/MatchesContext";
@@ -46,8 +46,9 @@ import { BolaoGroup, GroupMember, Prediction } from "../../types";
 import { canEditPrediction, canSeePredictions } from "../../utils/scoring";
 import { PHASE_LABELS, PHASE_ORDER } from "../../data/matches";
 import { TeamFlag } from "../../components/TeamFlag";
+import { useNow } from "../../hooks";
 
-// ─── Other users' predictions (shown after match starts) ─────────────────────
+// ─── Other users' predictions ─────────────────────────────────────────────────
 function OtherPredictions({
   matchId,
   groupId,
@@ -120,12 +121,14 @@ function MatchCard({
   onSave,
   saving,
   groupId,
+  now,
 }: {
   match: ReturnType<typeof useMatches>["matches"][0];
   prediction?: Prediction;
   onSave: (matchId: string, home: number, away: number) => Promise<void>;
   saving: string | null;
   groupId: string;
+  now: Date;
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -134,11 +137,19 @@ function MatchCard({
   );
   const [expanded, setExpanded] = useState(false);
 
-  const canEdit = canEditPrediction(match.startTime, match.status);
-  const canSee = canSeePredictions(match.startTime);
+  // Derived from `now` — will re-evaluate every 15 s as `now` changes
+  const canEdit = canEditPrediction(match.startTime, match.status, now);
+  const canSee = canSeePredictions(match.startTime, now);
   const isLive = match.status === "live";
   const isFinished = match.status === "finished";
   const isSaving = saving === match.id;
+
+  // If the edit window just closed while the user had the form open, discard draft
+  useEffect(() => {
+    if (!canEdit && draft !== null) {
+      setDraft(null);
+    }
+  }, [canEdit]);
 
   const startEdit = () =>
     setDraft({
@@ -155,6 +166,14 @@ function MatchCard({
     await onSave(match.id, h, a);
     setDraft(null);
   };
+
+  // Minutes until edit closes — used for countdown label
+  const minutesLeft = Math.max(
+    0,
+    Math.floor(
+      (match.startTime.getTime() - 5 * 60_000 - now.getTime()) / 60_000,
+    ),
+  );
 
   const flagSize = isMobile ? 20 : 26;
 
@@ -230,7 +249,6 @@ function MatchCard({
             my: 1,
           }}
         >
-          {/* Home */}
           <Box
             sx={{
               display: "flex",
@@ -255,7 +273,6 @@ function MatchCard({
             />
           </Box>
 
-          {/* Middle: score or VS */}
           <Box
             sx={{
               textAlign: "center",
@@ -279,7 +296,6 @@ function MatchCard({
             )}
           </Box>
 
-          {/* Away */}
           <Box
             sx={{ display: "flex", alignItems: "center", gap: 0.75, flex: 1 }}
           >
@@ -310,7 +326,7 @@ function MatchCard({
 
         <Divider sx={{ my: 1 }} />
 
-        {/* Prediction section */}
+        {/* Prediction header */}
         <Box
           sx={{
             display: "flex",
@@ -352,7 +368,7 @@ function MatchCard({
           </Box>
         </Box>
 
-        {/* Edit mode */}
+        {/* Edit form */}
         {canEdit && draft !== null && (
           <Box
             sx={{
@@ -427,12 +443,16 @@ function MatchCard({
           </Box>
         )}
 
-        {/* Call to action */}
+        {/* CTA: register / edit button */}
         {canEdit && draft === null && (
           <Box sx={{ mt: 1 }}>
             {prediction ? (
               <Tooltip
-                title={`Editar até ${formatDistanceToNow(new Date(match.startTime.getTime() - 5 * 60000), { addSuffix: true, locale: ptBR })}`}
+                title={
+                  minutesLeft > 0
+                    ? `Fecha em ${minutesLeft} min`
+                    : "Fecha em menos de 1 min"
+                }
               >
                 <Button
                   size="small"
@@ -442,6 +462,14 @@ function MatchCard({
                   sx={{ fontSize: 11 }}
                 >
                   Editar palpite
+                  {minutesLeft <= 10 && minutesLeft > 0 && (
+                    <Chip
+                      label={`${minutesLeft}min`}
+                      size="small"
+                      color="warning"
+                      sx={{ ml: 0.75, fontSize: 9, height: 16 }}
+                    />
+                  )}
                 </Button>
               </Tooltip>
             ) : (
@@ -459,6 +487,7 @@ function MatchCard({
           </Box>
         )}
 
+        {/* Locked */}
         {!canEdit && !prediction && !isLive && !isFinished && (
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 1 }}>
             <LockIcon sx={{ fontSize: 13, color: "text.secondary" }} />
@@ -468,7 +497,7 @@ function MatchCard({
           </Box>
         )}
 
-        {/* Other predictions toggle */}
+        {/* Other predictions toggle — visible only after kick-off */}
         {canSee && (
           <Box sx={{ mt: 1 }}>
             <Button
@@ -527,8 +556,8 @@ function RankingTab({
               sx={{
                 width: 26,
                 textAlign: "center",
-                color: i < 3 ? medalColors[i] : "text.secondary",
                 flexShrink: 0,
+                color: i < 3 ? medalColors[i] : "text.secondary",
               }}
             >
               {i + 1}
@@ -589,6 +618,8 @@ const GroupDetailPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const now = useNow();
 
   const [group, setGroup] = useState<BolaoGroup | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
@@ -735,7 +766,6 @@ const GroupDetailPage = () => {
 
       {mainTab === 0 && (
         <>
-          {/* Phase tabs */}
           <Tabs
             value={tabPhase}
             onChange={(_, v) => setTabPhase(v)}
@@ -762,6 +792,7 @@ const GroupDetailPage = () => {
                 onSave={handleSavePrediction}
                 saving={saving}
                 groupId={groupId as string}
+                now={now}
               />
             ))}
           </Stack>
