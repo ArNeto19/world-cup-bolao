@@ -139,9 +139,6 @@ export function subscribeGroups(cb: (groups: BolaoGroup[]) => void) {
 
 // ─── Members ─────────────────────────────────────────────────────────────────
 export async function joinGroup(groupId: string, user: User): Promise<void> {
-  const u = auth.currentUser
-  console.log("🚀 ~ joinGroup ~ u:", u)
-  
   const memberRef = doc(db, "groups", groupId, "members", user.uid);
   const batch = writeBatch(db);
   batch.set(memberRef, {

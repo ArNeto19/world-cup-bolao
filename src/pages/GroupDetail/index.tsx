@@ -89,10 +89,10 @@ function OtherPredictions({
               bgcolor: "primary.dark",
             }}
           >
-            {p.userId.charAt(0).toUpperCase()}
+            {p.username.charAt(0).toUpperCase()}
           </Avatar>
           <Typography variant="caption" flex={1} noWrap>
-            {p.userId.substring(0, 10)}…
+            {p.username}
           </Typography>
           <Chip
             label={`${p.homeScore} × ${p.awayScore}`}
@@ -119,11 +119,13 @@ function MatchCard({
   prediction,
   onSave,
   saving,
+  groupId,
 }: {
   match: ReturnType<typeof useMatches>["matches"][0];
   prediction?: Prediction;
   onSave: (matchId: string, home: number, away: number) => Promise<void>;
   saving: string | null;
+  groupId: string;
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -478,7 +480,7 @@ function MatchCard({
               {expanded ? "Ocultar" : "Ver"} palpites dos participantes
             </Button>
             <Collapse in={expanded}>
-              <OtherPredictions matchId={match.id} groupId={match.id} />
+              <OtherPredictions matchId={match.id} groupId={groupId} />
             </Collapse>
           </Box>
         )}
@@ -643,6 +645,7 @@ const GroupDetailPage = () => {
           homeScore: home,
           awayScore: away,
           submittedAt: new Date(),
+          username: user.displayName,
         };
         await upsertPrediction(pred);
         setPredictions((p) => ({ ...p, [matchId]: pred }));
@@ -758,6 +761,7 @@ const GroupDetailPage = () => {
                 prediction={predictions[match.id]}
                 onSave={handleSavePrediction}
                 saving={saving}
+                groupId={groupId as string}
               />
             ))}
           </Stack>

@@ -68,8 +68,7 @@ const GroupsPage = () => {
         msg: `Você entrou no grupo "${group.name}"!`,
         type: "success",
       });
-    } catch (error) {
-      console.error(error)
+    } catch {
       setSnack({
         msg: "Erro ao entrar no grupo. Tente novamente.",
         type: "error",

@@ -70,6 +70,7 @@ export interface Prediction {
   points?: number;
   submittedAt: Date;
   updatedAt?: Date;
+  username: string;
 }
 
 // ─── Scoring ─────────────────────────────────────────────────────────────────
