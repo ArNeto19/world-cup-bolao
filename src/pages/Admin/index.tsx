@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
 import {
   Box,
   Typography,
@@ -35,6 +38,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import GroupsIcon from "@mui/icons-material/Groups";
+
+import { TeamFlag } from "../../components/TeamFlag";
 import { useAuth } from "../../store/AuthContext";
 import {
   createGroup,
@@ -50,72 +55,7 @@ import {
 import { useMatches } from "../../store/MatchesContext";
 import { BolaoGroup, Match, Team, User } from "../../types";
 import { PHASE_LABELS, PHASE_ORDER } from "../../data/matches";
-import { TeamFlag } from "../../components/TeamFlag";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-
-// ─── Full team list ───────────────────────────────────────────────────────────
-const ALL_TEAMS: Team[] = [
-  { code: "ARG", flagCode: "AR", name: "Argentina" },
-  { code: "AUS", flagCode: "AU", name: "Austrália" },
-  { code: "AUT", flagCode: "AT", name: "Áustria" },
-  { code: "BEL", flagCode: "BE", name: "Bélgica" },
-  { code: "BOL", flagCode: "BO", name: "Bolívia" },
-  { code: "BRA", flagCode: "BR", name: "Brasil" },
-  { code: "CAN", flagCode: "CA", name: "Canadá" },
-  { code: "CHI", flagCode: "CL", name: "Chile" },
-  { code: "CMR", flagCode: "CM", name: "Camarões" },
-  { code: "COL", flagCode: "CO", name: "Colômbia" },
-  { code: "CPV", flagCode: "CV", name: "Cabo Verde" },
-  { code: "CRC", flagCode: "CR", name: "Costa Rica" },
-  { code: "CRO", flagCode: "HR", name: "Croácia" },
-  { code: "CUW", flagCode: "CW", name: "Curaçao" },
-  { code: "DEN", flagCode: "DK", name: "Dinamarca" },
-  { code: "ECU", flagCode: "EC", name: "Equador" },
-  { code: "EGY", flagCode: "EG", name: "Egito" },
-  { code: "ENG", flagCode: "GB", name: "Inglaterra" },
-  { code: "ESP", flagCode: "ES", name: "Espanha" },
-  { code: "FRA", flagCode: "FR", name: "França" },
-  { code: "GER", flagCode: "DE", name: "Alemanha" },
-  { code: "GHA", flagCode: "GH", name: "Gana" },
-  { code: "HAI", flagCode: "HT", name: "Haiti" },
-  { code: "IRI", flagCode: "IR", name: "Irã" },
-  { code: "IVC", flagCode: "CI", name: "Costa do Marfim" },
-  { code: "JOR", flagCode: "JO", name: "Jordânia" },
-  { code: "JPN", flagCode: "JP", name: "Japão" },
-  { code: "KOR", flagCode: "KR", name: "Coreia do Sul" },
-  { code: "MAR", flagCode: "MA", name: "Marrocos" },
-  { code: "MEX", flagCode: "MX", name: "México" },
-  { code: "NED", flagCode: "NL", name: "Países Baixos" },
-  { code: "NGR", flagCode: "NG", name: "Nigéria" },
-  { code: "NOR", flagCode: "NO", name: "Noruega" },
-  { code: "NZL", flagCode: "NZ", name: "Nova Zelândia" },
-  { code: "PAN", flagCode: "PA", name: "Panamá" },
-  { code: "PAR", flagCode: "PY", name: "Paraguai" },
-  { code: "POL", flagCode: "PL", name: "Polônia" },
-  { code: "POR", flagCode: "PT", name: "Portugal" },
-  { code: "QAT", flagCode: "QA", name: "Catar" },
-  { code: "ROM", flagCode: "RO", name: "Romênia" },
-  { code: "RSA", flagCode: "ZA", name: "África do Sul" },
-  { code: "SAU", flagCode: "SA", name: "Arábia Saudita" },
-  { code: "SCO", flagCode: "GB", name: "Escócia" },
-  { code: "SEN", flagCode: "SN", name: "Senegal" },
-  { code: "SRB", flagCode: "RS", name: "Sérvia" },
-  { code: "SUI", flagCode: "CH", name: "Suíça" },
-  { code: "SWE", flagCode: "SE", name: "Suécia" },
-  { code: "TUN", flagCode: "TN", name: "Tunísia" },
-  { code: "TUR", flagCode: "TR", name: "Turquia" },
-  { code: "UKR", flagCode: "UA", name: "Ucrânia" },
-  { code: "URU", flagCode: "UY", name: "Uruguai" },
-  { code: "USA", flagCode: "US", name: "Estados Unidos" },
-  { code: "UZB", flagCode: "UZ", name: "Uzbequistão" },
-  { code: "VEN", flagCode: "VE", name: "Venezuela" },
-  { code: "ALG", flagCode: "DZ", name: "Argélia" },
-  { code: "CZE", flagCode: "CZ", name: "Rep. Tcheca" },
-  { code: "IRQ", flagCode: "IQ", name: "Iraque" },
-  { code: "BIH", flagCode: "BA", name: "Bósnia" },
-  { code: "COD", flagCode: "CD", name: "RD Congo" },
-];
+import { ALL_TEAMS } from "../../constants";
 
 // ─── Groups tab ───────────────────────────────────────────────────────────────
 function GroupsTab() {
@@ -350,8 +290,6 @@ function GroupsTab() {
 // ─── Matches tab ──────────────────────────────────────────────────────────────
 function MatchesTab() {
   const { matchesByPhase } = useMatches();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [phase, setPhase] = useState("group_stage");
 
   const [scoreDialog, setScoreDialog] = useState<Match | null>(null);
