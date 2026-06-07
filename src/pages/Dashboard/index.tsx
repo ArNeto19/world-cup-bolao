@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Box,
   Typography,
@@ -11,18 +13,22 @@ import {
   Stack,
   useMediaQuery,
   useTheme,
+  Alert,
 } from "@mui/material";
 import SportsSoccerIcon from "@mui/icons-material/SportsSoccer";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import GroupsIcon from "@mui/icons-material/Groups";
+import SyncIcon from "@mui/icons-material/Sync";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../store/AuthContext";
 import { useMatches } from "../../store/MatchesContext";
 import { getGroups, getGroupMembers } from "../../services/firestoreService";
 import { TeamFlag } from "../../components/TeamFlag";
-import { BolaoGroup } from "../../types";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { useLiveSync } from "../../hooks";
+import { BolaoGroup, Match } from "../../types";
+
+// How many minutes before kick-off a match is considered "upcoming enough to show"
+const UPCOMING_WINDOW_MS = 30 * 60 * 1000;
 
 const DashboardPage = () => {
   const { user } = useAuth();
@@ -34,6 +40,29 @@ const DashboardPage = () => {
   const [myGroups, setMyGroups] = useState<BolaoGroup[]>([]);
   const [myScores, setMyScores] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+
+  // API key from env — must be set in .env as VITE_API_FOOTBALL_KEY
+  const apiKey = import.meta.env.VITE_API_FOOTBALL_KEY as string | undefined;
+
+  const isAdmin = user?.role === "admin";
+
+  // Matches that are live or close to kick-off — candidates for sync
+  const watchableMatches = useMemo<Match[]>(() => {
+    if (!isAdmin || !apiKey) return [];
+    const now = Date.now();
+    return matches.filter((m) => {
+      if (m.status === "finished") return false;
+      if (m.status === "live") return true;
+      const msUntil = m.startTime.getTime() - now;
+      return msUntil >= 0 && msUntil <= UPCOMING_WINDOW_MS;
+    });
+  }, [matches, isAdmin, apiKey]);
+
+  // Activate live sync only for admins
+  useLiveSync({
+    apiKey: isAdmin ? (apiKey ?? "") : "",
+    matches: watchableMatches,
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -94,6 +123,38 @@ const DashboardPage = () => {
         </Typography>
       </Box>
 
+      {/* Admin sync status banner */}
+      {isAdmin && watchableMatches.length > 0 && (
+        <Alert
+          icon={
+            <SyncIcon
+              fontSize="small"
+              sx={{
+                animation: "spin 2s linear infinite",
+                "@keyframes spin": {
+                  from: { transform: "rotate(0deg)" },
+                  to: { transform: "rotate(360deg)" },
+                },
+              }}
+            />
+          }
+          severity="info"
+          sx={{ mb: 2, fontSize: 13 }}
+        >
+          Sincronização ativa para {watchableMatches.length} partida
+          {watchableMatches.length !== 1 ? "s" : ""} — atualizando a cada 3
+          minutos.
+        </Alert>
+      )}
+
+      {isAdmin && !apiKey && (
+        <Alert severity="warning" sx={{ mb: 2, fontSize: 13 }}>
+          <strong>VITE_API_FOOTBALL_KEY</strong> não configurada — sincronização
+          automática desativada. Adicione a chave no arquivo <code>.env</code> e
+          reinicie o servidor.
+        </Alert>
+      )}
+
       {/* Stats */}
       <Grid container spacing={1.5} sx={{ mb: 3 }}>
         {stats.map((s) => (
@@ -112,7 +173,7 @@ const DashboardPage = () => {
                     width: { xs: 36, sm: 44 },
                     height: { xs: 36, sm: 44 },
                     borderRadius: 2,
-                    bgcolor: `rgba(0,0,0,0.08)`,
+                    bgcolor: "rgba(128,128,128,0.1)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -238,7 +299,7 @@ const DashboardPage = () => {
           )}
         </Grid>
 
-        {/* Upcoming / Live */}
+        {/* Live / Upcoming */}
         <Grid item xs={12} md={6}>
           <Box
             sx={{
@@ -257,7 +318,7 @@ const DashboardPage = () => {
           </Box>
           <Stack spacing={1}>
             {(liveMatches.length > 0
-              ? liveMatches.slice(0, 2)
+              ? liveMatches.slice(0, 3)
               : upcomingMatches
             ).map((m) => {
               const isLive = m.status === "live";
@@ -290,9 +351,26 @@ const DashboardPage = () => {
                       ) : (
                         <span />
                       )}
-                      <Typography variant="caption" color="text.secondary">
-                        {format(m.startTime, "dd/MM HH:mm", { locale: ptBR })}
-                      </Typography>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                      >
+                        {isLive && (
+                          <Chip
+                            label="● AO VIVO"
+                            size="small"
+                            sx={{
+                              bgcolor: "#FF5252",
+                              color: "#fff",
+                              fontWeight: 700,
+                              fontSize: 10,
+                              height: 18,
+                            }}
+                          />
+                        )}
+                        <Typography variant="caption" color="text.secondary">
+                          {format(m.startTime, "dd/MM HH:mm", { locale: ptBR })}
+                        </Typography>
+                      </Box>
                     </Box>
                     <Box
                       sx={{
