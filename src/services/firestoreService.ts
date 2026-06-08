@@ -60,7 +60,7 @@ export async function updateDisplayName(
 
 export async function setUserRole(
   uid: string,
-  role: "admin" | "user",
+  role: "admin" | "player" | "user",
 ): Promise<void> {
   await updateDoc(doc(db, "users", uid), { role });
 }

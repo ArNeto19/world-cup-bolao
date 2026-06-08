@@ -1,57 +1,54 @@
-rules_version = '2';
+rules_version = '3';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── helpers ──────────────────────────────────────────────────────────────
-    function isAuth() { return request.auth != null; }
-    function uid() { return request.auth.uid; }
-    function isAdmin() {
-      return isAuth() &&
-        get(/databases/$(database)/documents/users/$(uid())).data.role == 'admin';
+    // ── helpers ───────────────────────────────────────────────────────────────
+    function isAuth()   { return request.auth != null; }
+    function uid()      { return request.auth.uid; }
+
+    function role() {
+      return get(/databases/$(database)/documents/users/$(uid())).data.role;
     }
-    function isMember(groupId) {
-      return isAuth() &&
-        exists(/databases/$(database)/documents/groups/$(groupId)/members/$(uid()));
-    }
+
+    function isAdmin()  { return isAuth() && role() == 'admin'; }
+    function isPlayer() { return isAuth() && (role() == 'player' || role() == 'admin'); }
 
     // ── users ─────────────────────────────────────────────────────────────────
     match /users/{userId} {
-      allow read: if isAuth();
+      // Anyone authenticated can read their own doc (needed for role check on login)
+      allow read: if isAuth() && uid() == userId;
+      // Admins can read all users (for the admin panel)
+      allow read: if isAdmin();
+      // New user creates their own doc on first login
       allow create: if isAuth() && uid() == userId;
-      allow update: if (isAuth() && uid() == userId)
-                    || isAdmin(); // admin can set role
+      // User can update their own displayName; admin can update role
+      allow update: if (isAuth() && uid() == userId) || isAdmin();
     }
 
     // ── groups ────────────────────────────────────────────────────────────────
     match /groups/{groupId} {
-      allow read, create, update: if isAuth();
+      allow read, create, update: if isPlayer();
       allow delete: if isAdmin();
 
-      // members subcollection
       match /members/{memberId} {
-        allow read: if isAuth();
-        // join: only the user themselves
-        allow create: if isAuth() && uid() == memberId;
-        // leave: user themselves or admin
-        allow delete: if (isAuth() && uid() == memberId) || isAdmin();
-        // score updates: admin only (triggered server-side by score recalc)
+        allow read:   if isPlayer();
+        allow create: if isPlayer() && uid() == memberId;
+        allow delete: if (isPlayer() && uid() == memberId) || isAdmin();
         allow update: if isAdmin();
       }
     }
 
     // ── matches ───────────────────────────────────────────────────────────────
     match /matches/{matchId} {
-      allow read: if isAuth();
+      allow read:  if isPlayer();
       allow write: if isAdmin();
     }
 
     // ── predictions ───────────────────────────────────────────────────────────
     match /predictions/{predId} {
-      allow read: if isAuth();
-      // create/update own prediction only if match hasn't started (enforced client-side too)
-      allow create, update: if isAuth()
-        && request.resource.data.userId == uid() || isAdmin();
-      allow delete: if isAdmin();
+      allow read:          if isPlayer();
+      allow create, update: (if isPlayer() && request.resource.data.userId == uid()) || isAdmin();
+      allow delete:        if isAdmin();
     }
   }
 }

@@ -1,8 +1,8 @@
 import React from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import { CircularProgress, Box } from "@mui/material";
 
 import Layout from "./components/layout/Layout";
+import { RequireAdmin, RequireAuth, RequirePlayer } from "./components/router";
 import {
   AdminPage,
   LoginPage,
@@ -12,32 +12,6 @@ import {
   MatchesPage,
   ProfilePage,
 } from "./pages";
-
-import { useAuth } from "./store/AuthContext";
-
-function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading)
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
-        <CircularProgress />
-      </Box>
-    );
-  if (!user) return <Navigate to="/login" replace />;
-  return <>{children}</>;
-}
-
-function RequireAdmin({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading)
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
-        <CircularProgress />
-      </Box>
-    );
-  if (!user || user.role !== "admin") return <Navigate to="/" replace />;
-  return <>{children}</>;
-}
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -49,11 +23,44 @@ export const router = createBrowserRouter([
       </RequireAuth>
     ),
     children: [
+      // Dashboard: accessible by all authenticated users (shows pending message for 'user')
       { index: true, element: <DashboardPage /> },
-      { path: "groups", element: <GroupsPage /> },
-      { path: "groups/:groupId", element: <GroupDetailPage /> },
-      { path: "matches", element: <MatchesPage /> },
+      // Profile: accessible by all authenticated users
       { path: "profile", element: <ProfilePage /> },
+      // Player+ routes
+      {
+        path: "groups",
+        element: (
+          <RequirePlayer>
+            <GroupsPage />
+          </RequirePlayer>
+        ),
+      },
+      {
+        path: "groups/:groupId",
+        element: (
+          <RequirePlayer>
+            <GroupDetailPage />
+          </RequirePlayer>
+        ),
+      },
+      {
+        path: "my-groups",
+        element: (
+          <RequirePlayer>
+            <GroupsPage />
+          </RequirePlayer>
+        ),
+      },
+      {
+        path: "matches",
+        element: (
+          <RequirePlayer>
+            <MatchesPage />
+          </RequirePlayer>
+        ),
+      },
+      // Admin only
       {
         path: "admin",
         element: (

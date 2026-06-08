@@ -38,6 +38,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import GroupsIcon from "@mui/icons-material/Groups";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 
 import { TeamFlag } from "../../components/TeamFlag";
 import { useAuth } from "../../store/AuthContext";
@@ -729,7 +731,10 @@ function UsersTab() {
   const { user: me } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [snack, setSnack] = useState<string | null>(null);
+  const [snack, setSnack] = useState<{
+    msg: string;
+    type: "success" | "error";
+  } | null>(null);
 
   useEffect(() => {
     getAllUsers().then((u) => {
@@ -738,14 +743,55 @@ function UsersTab() {
     });
   }, []);
 
-  const toggleRole = async (u: User) => {
-    const newRole = u.role === "admin" ? "user" : "admin";
-    await setUserRole(u.uid, newRole);
-    setUsers((prev) =>
-      prev.map((x) => (x.uid === u.uid ? { ...x, role: newRole } : x)),
-    );
-    setSnack(
-      `${u.displayName} agora é ${newRole === "admin" ? "administrador" : "usuário comum"}.`,
+  const setRole = async (u: User, newRole: User["role"]) => {
+    try {
+      await setUserRole(u.uid, newRole);
+      setUsers((prev) =>
+        prev.map((x) => (x.uid === u.uid ? { ...x, role: newRole } : x)),
+      );
+      const labels: Record<User["role"], string> = {
+        admin: "administrador",
+        player: "player",
+        user: "pendente",
+      };
+      setSnack({
+        msg: `${u.displayName} agora é ${labels[newRole]}.`,
+        type: "success",
+      });
+    } catch {
+      setSnack({ msg: "Erro ao atualizar cargo.", type: "error" });
+    }
+  };
+
+  const pendingUsers = users.filter((u) => u.role === "user");
+  const approvedUsers = users.filter((u) => u.role !== "user");
+
+  const roleChip = (u: User) => {
+    if (u.role === "admin")
+      return (
+        <Chip
+          label="Admin"
+          size="small"
+          color="secondary"
+          sx={{ fontSize: 10 }}
+        />
+      );
+    if (u.role === "player")
+      return (
+        <Chip
+          label="Player"
+          size="small"
+          color="primary"
+          sx={{ fontSize: 10 }}
+        />
+      );
+    return (
+      <Chip
+        label="Pendente"
+        size="small"
+        color="warning"
+        sx={{ fontSize: 10 }}
+      />
     );
   };
 
@@ -753,57 +799,157 @@ function UsersTab() {
 
   return (
     <Box>
-      <Stack spacing={1}>
-        {users.map((u) => (
-          <Card key={u.uid} elevation={0}>
-            <CardContent
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1.5,
-                p: "10px 14px !important",
-              }}
-            >
-              <Avatar
-                src={u.photoURL}
-                sx={{ width: 34, height: 34, fontSize: 14 }}
+      {/* Pending approvals */}
+      {pendingUsers.length > 0 && (
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+            <HourglassEmptyIcon sx={{ fontSize: 18, color: "warning.main" }} />
+            <Typography fontWeight={700} fontSize={14} color="warning.main">
+              Aguardando aprovação ({pendingUsers.length})
+            </Typography>
+          </Box>
+          <Stack spacing={1}>
+            {pendingUsers.map((u) => (
+              <Card
+                key={u.uid}
+                elevation={0}
+                sx={{ border: "1px solid rgba(255,167,38,0.35)" }}
               >
-                {u.displayName?.[0]}
-              </Avatar>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography fontWeight={600} fontSize={14} noWrap>
-                  {u.displayName}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  {u.email}
-                </Typography>
-              </Box>
-              <Chip
-                label={u.role === "admin" ? "Admin" : "Usuário"}
-                size="small"
-                color={u.role === "admin" ? "secondary" : "default"}
-                sx={{ fontSize: 10 }}
-              />
-              {u.uid !== me?.uid && (
-                <Tooltip
-                  title={u.role === "admin" ? "Remover admin" : "Tornar admin"}
+                <CardContent
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    p: "10px 14px !important",
+                  }}
                 >
-                  <IconButton size="small" onClick={() => toggleRole(u)}>
-                    <AdminPanelSettingsIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </Stack>
+                  <Avatar
+                    src={u.photoURL}
+                    sx={{ width: 34, height: 34, fontSize: 14 }}
+                  >
+                    {u.displayName?.[0]}
+                  </Avatar>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography fontWeight={600} fontSize={14} noWrap>
+                      {u.displayName}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" noWrap>
+                      {u.email}
+                    </Typography>
+                  </Box>
+                  {roleChip(u)}
+                  <Tooltip title="Aprovar como player">
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="primary"
+                      startIcon={<CheckCircleIcon />}
+                      onClick={() => setRole(u, "player")}
+                      sx={{ fontSize: 11, whiteSpace: "nowrap" }}
+                    >
+                      Aprovar
+                    </Button>
+                  </Tooltip>
+                </CardContent>
+              </Card>
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      {/* Approved users */}
+      <Box>
+        {approvedUsers.length > 0 && (
+          <Typography
+            fontWeight={700}
+            fontSize={14}
+            sx={{ mb: 1.5 }}
+            color="text.secondary"
+          >
+            Usuários aprovados ({approvedUsers.length})
+          </Typography>
+        )}
+        <Stack spacing={1}>
+          {approvedUsers.map((u) => (
+            <Card key={u.uid} elevation={0}>
+              <CardContent
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  p: "10px 14px !important",
+                }}
+              >
+                <Avatar
+                  src={u.photoURL}
+                  sx={{ width: 34, height: 34, fontSize: 14 }}
+                >
+                  {u.displayName?.[0]}
+                </Avatar>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography fontWeight={600} fontSize={14} noWrap>
+                    {u.displayName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {u.email}
+                  </Typography>
+                </Box>
+                {roleChip(u)}
+                {u.uid !== me?.uid && (
+                  <Box sx={{ display: "flex", gap: 0.5 }}>
+                    {/* Demote / promote to player */}
+                    {u.role === "admin" && (
+                      <Tooltip title="Rebaixar para player">
+                        <IconButton
+                          size="small"
+                          onClick={() => setRole(u, "player")}
+                        >
+                          <CheckCircleIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {u.role === "player" && (
+                      <Tooltip title="Revogar acesso (pendente)">
+                        <IconButton
+                          size="small"
+                          color="warning"
+                          onClick={() => setRole(u, "user")}
+                        >
+                          <HourglassEmptyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {/* Toggle admin */}
+                    <Tooltip
+                      title={
+                        u.role === "admin" ? "Remover admin" : "Tornar admin"
+                      }
+                    >
+                      <IconButton
+                        size="small"
+                        color={u.role === "admin" ? "default" : "secondary"}
+                        onClick={() =>
+                          setRole(u, u.role === "admin" ? "player" : "admin")
+                        }
+                      >
+                        <AdminPanelSettingsIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </Stack>
+      </Box>
+
       <Snackbar
         open={Boolean(snack)}
         autoHideDuration={3000}
         onClose={() => setSnack(null)}
       >
-        <Alert severity="success" onClose={() => setSnack(null)}>
-          {snack}
+        <Alert severity={snack?.type} onClose={() => setSnack(null)}>
+          {snack?.msg}
         </Alert>
       </Snackbar>
     </Box>
@@ -816,6 +962,14 @@ const AdminPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [tab, setTab] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (user?.role !== "admin") return;
+    getAllUsers().then((all) =>
+      setPendingCount(all.filter((u) => u.role === "user").length),
+    );
+  }, [user]);
 
   if (user?.role !== "admin") {
     return (
@@ -846,7 +1000,19 @@ const AdminPage = () => {
           sx={{ fontSize: { xs: 12, sm: 14 }, minHeight: 44 }}
         />
         <Tab
-          label="Usuários"
+          label={
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+              Usuários
+              {pendingCount > 0 && (
+                <Chip
+                  label={pendingCount}
+                  size="small"
+                  color="warning"
+                  sx={{ fontSize: 10, height: 18, minWidth: 18 }}
+                />
+              )}
+            </Box>
+          }
           sx={{ fontSize: { xs: 12, sm: 14 }, minHeight: 44 }}
         />
       </Tabs>

@@ -1,10 +1,12 @@
 // ─── User ────────────────────────────────────────────────────────────────────
+export type UserRole = "admin" | "player" | "user";
+
 export interface User {
   uid: string;
   email: string;
   displayName: string;
   photoURL?: string;
-  role: "admin" | "user";
+  role: UserRole;
   createdAt: Date;
 }
 
@@ -41,7 +43,7 @@ export type MatchStatus = "scheduled" | "live" | "finished" | "cancelled";
 
 export interface Team {
   code: string;
-  flagCode: string; // ISO 3166-1 alpha-2 for FlagKit CDN
+  flagCode: string;
   name: string;
 }
 
@@ -70,7 +72,6 @@ export interface Prediction {
   points?: number;
   submittedAt: Date;
   updatedAt?: Date;
-  username: string;
 }
 
 // ─── Scoring ─────────────────────────────────────────────────────────────────

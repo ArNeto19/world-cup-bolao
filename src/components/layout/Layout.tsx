@@ -54,13 +54,18 @@ const Layout = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
+  const isPlayer = user?.role === "player" || user?.role === "admin";
+
+  // Pending users only see home
+  const visibleNavItems = isPlayer ? navItems : navItems.slice(0, 1);
+
   const handleNav = (path: string) => {
     navigate(path);
     setDrawerOpen(false);
   };
 
   // Bottom nav value: match by prefix
-  const bottomNavValue = navItems.findIndex((n) =>
+  const bottomNavValue = visibleNavItems.findIndex((n) =>
     n.path === "/"
       ? location.pathname === "/"
       : location.pathname.startsWith(n.path),
@@ -89,7 +94,7 @@ const Layout = () => {
       </Box>
       <Divider />
       <List sx={{ px: 1, pt: 1 }}>
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <ListItem key={item.path} disablePadding>
             <ListItemButton
               selected={
@@ -355,10 +360,10 @@ const Layout = () => {
         >
           <BottomNavigation
             value={bottomNavValue}
-            onChange={(_, v) => handleNav(navItems[v]?.path ?? "/")}
+            onChange={(_, v) => handleNav(visibleNavItems[v]?.path ?? "/")}
             sx={{ bgcolor: "background.paper", height: 56 }}
           >
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <BottomNavigationAction
                 key={item.path}
                 label={item.label}

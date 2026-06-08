@@ -18,18 +18,78 @@ import {
 import SportsSoccerIcon from "@mui/icons-material/SportsSoccer";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import GroupsIcon from "@mui/icons-material/Groups";
+import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 import SyncIcon from "@mui/icons-material/Sync";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../store/AuthContext";
 import { useMatches } from "../../store/MatchesContext";
 import { getGroups, getGroupMembers } from "../../services/firestoreService";
 import { TeamFlag } from "../../components/TeamFlag";
-import { useLiveSync } from "../../hooks";
+import { useLiveSync } from "../../hooks/useLiveSync";
 import { BolaoGroup, Match } from "../../types";
 
-// How many minutes before kick-off a match is considered "upcoming enough to show"
 const UPCOMING_WINDOW_MS = 30 * 60 * 1000;
 
+// ─── Pending approval screen ──────────────────────────────────────────────────
+function PendingApproval() {
+  const { user, signOut } = useAuth();
+  return (
+    <Box
+      sx={{
+        minHeight: "calc(100vh - 64px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        p: 3,
+      }}
+    >
+      <Box sx={{ textAlign: "center", maxWidth: 420 }}>
+        <Box
+          sx={{
+            width: 72,
+            height: 72,
+            borderRadius: "50%",
+            mx: "auto",
+            mb: 3,
+            bgcolor: "rgba(255,214,0,0.12)",
+            border: "2px solid rgba(255,214,0,0.3)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <HourglassEmptyIcon sx={{ fontSize: 36, color: "secondary.main" }} />
+        </Box>
+        <Typography variant="h5" fontWeight={800} gutterBottom>
+          Cadastro pendente
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+          O administrador deve aprovar seu cadastro para que possa participar de
+          grupos.
+        </Typography>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ display: "block", mb: 3 }}
+        >
+          Você está autenticado como <strong>{user?.email}</strong>.<br />
+          Assim que um administrador aprovar seu acesso, a página será liberada
+          automaticamente.
+        </Typography>
+        <Button
+          variant="outlined"
+          color="inherit"
+          size="small"
+          onClick={signOut}
+        >
+          Sair da conta
+        </Button>
+      </Box>
+    </Box>
+  );
+}
+
+// ─── Full dashboard (player + admin) ─────────────────────────────────────────
 const DashboardPage = () => {
   const { user } = useAuth();
   const { matches } = useMatches();
@@ -37,16 +97,11 @@ const DashboardPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const [myGroups, setMyGroups] = useState<BolaoGroup[]>([]);
-  const [myScores, setMyScores] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
-
-  // API key from env — must be set in .env as VITE_API_FOOTBALL_KEY
   const apiKey = import.meta.env.VITE_API_FOOTBALL_KEY as string | undefined;
-
   const isAdmin = user?.role === "admin";
+  const isPlayer = user?.role === "player" || isAdmin;
 
-  // Matches that are live or close to kick-off — candidates for sync
+  // ── Live sync (admin only) ─────────────────────────────────────────────────
   const watchableMatches = useMemo<Match[]>(() => {
     if (!isAdmin || !apiKey) return [];
     const now = Date.now();
@@ -58,14 +113,18 @@ const DashboardPage = () => {
     });
   }, [matches, isAdmin, apiKey]);
 
-  // Activate live sync only for admins
   useLiveSync({
     apiKey: isAdmin ? (apiKey ?? "") : "",
     matches: watchableMatches,
   });
 
+  // ── Data ──────────────────────────────────────────────────────────────────
+  const [myGroups, setMyGroups] = useState<BolaoGroup[]>([]);
+  const [myScores, setMyScores] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isPlayer) return;
     (async () => {
       const all = await getGroups();
       const joined: BolaoGroup[] = [];
@@ -82,7 +141,7 @@ const DashboardPage = () => {
       setMyScores(scores);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, isPlayer]);
 
   const liveMatches = matches.filter((m) => m.status === "live");
   const upcomingMatches = matches
@@ -111,6 +170,11 @@ const DashboardPage = () => {
     },
   ];
 
+  // ── Pending user: show only the approval message ──────────────────────────
+  if (user?.role === "user") {
+    return <PendingApproval />;
+  }
+
   return (
     <Box sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
       {/* Welcome */}
@@ -123,7 +187,7 @@ const DashboardPage = () => {
         </Typography>
       </Box>
 
-      {/* Admin sync status banner */}
+      {/* Admin banners */}
       {isAdmin && watchableMatches.length > 0 && (
         <Alert
           icon={
@@ -146,12 +210,10 @@ const DashboardPage = () => {
           minutos.
         </Alert>
       )}
-
       {isAdmin && !apiKey && (
         <Alert severity="warning" sx={{ mb: 2, fontSize: 13 }}>
           <strong>VITE_API_FOOTBALL_KEY</strong> não configurada — sincronização
-          automática desativada. Adicione a chave no arquivo <code>.env</code> e
-          reinicie o servidor.
+          automática desativada.
         </Alert>
       )}
 
