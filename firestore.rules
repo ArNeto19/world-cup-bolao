@@ -1,4 +1,4 @@
-rules_version = '3';
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -47,7 +47,7 @@ service cloud.firestore {
     // ── predictions ───────────────────────────────────────────────────────────
     match /predictions/{predId} {
       allow read:          if isPlayer();
-      allow create, update: (if isPlayer() && request.resource.data.userId == uid()) || isAdmin();
+      allow create, update: if (isPlayer() && request.resource.data.userId == uid()) || isAdmin();
       allow delete:        if isAdmin();
     }
   }
