@@ -1,0 +1,5 @@
+name = "football-data-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# No routes needed — the worker URL is called directly by the app
