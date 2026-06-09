@@ -25,7 +25,7 @@ import { useAuth } from "../../store/AuthContext";
 import { useMatches } from "../../store/MatchesContext";
 import { getGroups, getGroupMembers } from "../../services/firestoreService";
 import { TeamFlag } from "../../components/TeamFlag";
-import { useLiveSync } from "../../hooks/useLiveSync";
+import { useLiveSync } from "../../hooks";
 import { BolaoGroup, Match } from "../../types";
 
 const UPCOMING_WINDOW_MS = 30 * 60 * 1000;
@@ -97,7 +97,7 @@ const DashboardPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const apiKey = import.meta.env.VITE_API_FOOTBALL_KEY as string | undefined;
+  const apiKey = import.meta.env.VITE_FOOTBALL_DATA_KEY as string | undefined;
   const isAdmin = user?.role === "admin";
   const isPlayer = user?.role === "player" || isAdmin;
 
