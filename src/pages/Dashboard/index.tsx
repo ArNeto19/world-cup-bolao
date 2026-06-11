@@ -102,21 +102,21 @@ const DashboardPage = () => {
   const isPlayer = user?.role === "player" || isAdmin;
 
   // ── Live sync (admin only) ─────────────────────────────────────────────────
-  const watchableMatches = useMemo<Match[]>(() => {
-    if (!isAdmin || !apiKey) return [];
-    const now = Date.now();
-    return matches.filter((m) => {
-      if (m.status === "finished") return false;
-      if (m.status === "live") return true;
-      const msUntil = m.startTime.getTime() - now;
-      return msUntil >= 0 && msUntil <= UPCOMING_WINDOW_MS;
-    });
-  }, [matches, isAdmin, apiKey]);
+  // const watchableMatches = useMemo<Match[]>(() => {
+  //   if (!isAdmin || !apiKey) return [];
+  //   const now = Date.now();
+  //   return matches.filter((m) => {
+  //     if (m.status === "finished") return false;
+  //     if (m.status === "live") return true;
+  //     const msUntil = m.startTime.getTime() - now;
+  //     return msUntil >= 0 && msUntil <= UPCOMING_WINDOW_MS;
+  //   });
+  // }, [matches, isAdmin, apiKey]);
 
-  useLiveSync({
-    apiKey: isAdmin ? (apiKey ?? "") : "",
-    matches: watchableMatches,
-  });
+  // useLiveSync({
+  //   apiKey: isAdmin ? (apiKey ?? "") : "",
+  //   matches: watchableMatches,
+  // });
 
   // ── Data ──────────────────────────────────────────────────────────────────
   const [myGroups, setMyGroups] = useState<BolaoGroup[]>([]);
@@ -188,7 +188,7 @@ const DashboardPage = () => {
       </Box>
 
       {/* Admin banners */}
-      {isAdmin && watchableMatches.length > 0 && (
+      {/* {isAdmin && watchableMatches.length > 0 && (
         <Alert
           icon={
             <SyncIcon
@@ -209,7 +209,7 @@ const DashboardPage = () => {
           {watchableMatches.length !== 1 ? "s" : ""} — atualizando a cada 3
           minutos.
         </Alert>
-      )}
+      )} */}
       {isAdmin && !apiKey && (
         <Alert severity="warning" sx={{ mb: 2, fontSize: 13 }}>
           <strong>VITE_API_FOOTBALL_KEY</strong> não configurada — sincronização
