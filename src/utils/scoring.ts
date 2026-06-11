@@ -48,7 +48,7 @@ export function canEditPrediction(
   now: Date = new Date(),
 ): boolean {
   const cutoff = new Date(matchStartTime.getTime() - 5 * 60 * 1000);
-  return now < cutoff && status === "scheduled";
+  return now <= cutoff && status === "scheduled";
 }
 
 /**

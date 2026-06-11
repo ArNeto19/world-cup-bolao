@@ -125,7 +125,12 @@ function MatchCard({
 }: {
   match: ReturnType<typeof useMatches>["matches"][0];
   prediction?: Prediction;
-  onSave: (matchId: string, home: number, away: number) => Promise<void>;
+  onSave: (
+    matchId: string,
+    home: number,
+    away: number,
+    startTime: Date,
+  ) => Promise<void>;
   saving: string | null;
   groupId: string;
   now: Date;
@@ -163,7 +168,7 @@ function MatchCard({
     const h = parseInt(draft.home, 10);
     const a = parseInt(draft.away, 10);
     if (isNaN(h) || isNaN(a) || h < 0 || a < 0) return;
-    await onSave(match.id, h, a);
+    await onSave(match.id, h, a, match.startTime);
     setDraft(null);
   };
 
@@ -665,8 +670,20 @@ const GroupDetailPage = () => {
   }, [groupId, user]);
 
   const handleSavePrediction = useCallback(
-    async (matchId: string, home: number, away: number) => {
-      if (!user || !groupId) return;
+    async (matchId: string, home: number, away: number, startTime: Date) => {
+      if (!user || !groupId) {
+        return;
+      }
+
+      const cutoff = new Date(startTime.getTime() - 5 * 60 * 1000);
+      if (now <= cutoff) {
+        setSnack({
+          msg: "Não é mais permitido editar o palpite.",
+          severity: "error",
+        });
+        return;
+      }
+
       setSaving(matchId);
       try {
         const pred: Omit<Prediction, "id"> = {
