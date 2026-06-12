@@ -20,7 +20,7 @@ export function calculateScore(
   const goalDiff = !exactScore && predDiff === actualDiff;
   const actualDraw = actualHome === actualAway;
   const predDraw = predHome === predAway;
-  const draw = !exactScore && !goalDiff && actualDraw && predDraw;
+  const draw = !exactScore && actualDraw && predDraw;
   const winner =
     !exactScore &&
     !goalDiff &&
@@ -30,9 +30,16 @@ export function calculateScore(
       (predAway > predHome && actualAway > actualHome));
 
   let points = 0;
-  if (exactScore) points = 10;
-  else if (goalDiff) points = 5;
-  else if (winner || draw) points = 2;
+
+  if (exactScore) {
+    points = 10;
+  } else if (goalDiff && !draw) {
+    points = 5;
+  } else if (draw) {
+    points = 4;
+  } else if (winner) {
+    points = 2;
+  }
 
   return { exactScore, goalDiff, winner, draw, points };
 }
