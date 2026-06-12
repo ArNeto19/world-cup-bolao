@@ -370,8 +370,10 @@ export async function recalcGroupScoresForMatch(
   for (const [groupId, entries] of Object.entries(byGroup)) {
     const batch = writeBatch(db);
     for (const { uid, points } of entries) {
-      const memberRef = doc(db, "groups", groupId, "members", uid);
-      batch.update(memberRef, { score: increment(points) });
+      if (points > 0) {
+        const memberRef = doc(db, "groups", groupId, "members", uid);
+        batch.update(memberRef, { score: increment(points) });
+      }
     }
     await batch.commit();
   }
