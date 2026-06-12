@@ -676,7 +676,7 @@ const GroupDetailPage = () => {
       }
 
       const cutoff = new Date(startTime.getTime() - 5 * 60 * 1000);
-      if (now <= cutoff) {
+      if (now >= cutoff) {
         setSnack({
           msg: "Não é mais permitido editar o palpite.",
           severity: "error",
