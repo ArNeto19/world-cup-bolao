@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Box,
   Typography,
@@ -17,11 +19,12 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
-import { useMatches } from "../../store/MatchesContext";
-import { PHASE_LABELS, PHASE_ORDER } from "../../data/matches";
+
 import { TeamFlag } from "../../components/TeamFlag";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+
+import { useMatches } from "../../store/MatchesContext";
+import { normaliseString } from "../../utils";
+import { PHASE_LABELS, PHASE_ORDER } from "../../data/matches";
 
 const MatchesPage = () => {
   const { matchesByPhase, matches, loading } = useMatches();
@@ -30,22 +33,15 @@ const MatchesPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const normalise = (s: string) =>
-    s
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .trim();
-
-  const query = normalise(search);
+  const query = normaliseString(search);
 
   // When a search is active, show results across all phases; otherwise filter by selected tab
   const filteredMatches = useMemo(() => {
     if (!query) return matchesByPhase[phase] ?? [];
     return matches.filter(
       (m) =>
-        normalise(m.homeTeam.name).includes(query) ||
-        normalise(m.awayTeam.name).includes(query) ||
+        normaliseString(m.homeTeam.name).includes(query) ||
+        normaliseString(m.awayTeam.name).includes(query) ||
         m.homeTeam.code.toLowerCase().includes(query) ||
         m.awayTeam.code.toLowerCase().includes(query),
     );
@@ -55,12 +51,13 @@ const MatchesPage = () => {
     (p) => (matchesByPhase[p]?.length ?? 0) > 0,
   );
 
-  if (loading)
+  if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}>
         <CircularProgress />
       </Box>
     );
+  }
 
   return (
     <Box sx={{ p: { xs: 1.5, md: 3 } }}>
@@ -134,7 +131,7 @@ const MatchesPage = () => {
           // Highlight matched team name
           const highlight = (name: string) => {
             if (!query) return name;
-            const idx = normalise(name).indexOf(query);
+            const idx = normaliseString(name).indexOf(query);
             if (idx === -1) return name;
             return (
               <>

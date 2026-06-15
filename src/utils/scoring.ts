@@ -15,6 +15,8 @@ export function calculateScore(
   actualAway: number,
 ): ScoreBreakdown {
   const exactScore = predHome === actualHome && predAway === actualAway;
+  const exactHome = predHome === actualHome;
+  const exactAway = predAway === actualAway;
   const predDiff = predHome - predAway;
   const actualDiff = actualHome - actualAway;
   const goalDiff = !exactScore && predDiff === actualDiff;
@@ -38,7 +40,7 @@ export function calculateScore(
   } else if (draw) {
     points = 4;
   } else if (winner) {
-    points = 2;
+    points = 2 + (exactHome ? 1 : 0) + (exactAway ? 1 : 0);
   }
 
   return { exactScore, goalDiff, winner, draw, points };
