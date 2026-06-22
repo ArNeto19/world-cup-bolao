@@ -146,6 +146,7 @@ export async function joinGroup(groupId: string, user: User): Promise<void> {
     displayName: user.displayName,
     photoURL: user.photoURL || null,
     score: 0,
+    exactScores: 0,
     joinedAt: serverTimestamp(),
   });
   batch.update(doc(db, "groups", groupId), { memberCount: increment(1) });
@@ -184,9 +185,17 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
       orderBy("score", "desc"),
     ),
   );
-  return snap.docs.map(
+  const members = snap.docs.map(
     (d) =>
-      ({ ...d.data(), joinedAt: tsToDate(d.data().joinedAt) }) as GroupMember,
+      ({
+        ...d.data(),
+        exactScores: d.data().exactScores ?? 0,
+        joinedAt: tsToDate(d.data().joinedAt),
+      }) as GroupMember,
+  );
+  // Tie-break: same score → more exact scores ranks higher
+  return members.sort(
+    (a, b) => b.score - a.score || b.exactScores - a.exactScores,
   );
 }
 
@@ -200,13 +209,17 @@ export function subscribeGroupMembers(
       orderBy("score", "desc"),
     ),
     (snap) => {
+      const members = snap.docs.map(
+        (d) =>
+          ({
+            ...d.data(),
+            exactScores: d.data().exactScores ?? 0,
+            joinedAt: tsToDate(d.data().joinedAt),
+          }) as GroupMember,
+      );
       cb(
-        snap.docs.map(
-          (d) =>
-            ({
-              ...d.data(),
-              joinedAt: tsToDate(d.data().joinedAt),
-            }) as GroupMember,
+        members.sort(
+          (a, b) => b.score - a.score || b.exactScores - a.exactScores,
         ),
       );
     },
@@ -351,7 +364,10 @@ export async function recalcGroupScoresForMatch(
     query(collection(db, "predictions"), where("matchId", "==", matchId)),
   );
 
-  const byGroup: Record<string, { uid: string; points: number }[]> = {};
+  const byGroup: Record<
+    string,
+    { uid: string; pointsDelta: number; exactDelta: number }[]
+  > = {};
 
   for (const d of predsSnap.docs) {
     const pred = d.data() as Prediction;
@@ -361,19 +377,35 @@ export async function recalcGroupScoresForMatch(
       actualHome,
       actualAway,
     );
+
+    // Support re-running this after an admin score correction: compare against
+    // the previously stored points/exactScore so we only apply the difference.
+    const oldPoints = pred.points ?? 0;
+    const oldWasExact = oldPoints === 10;
+    const pointsDelta = breakdown.points - oldPoints;
+    const exactDelta = (breakdown.exactScore ? 1 : 0) - (oldWasExact ? 1 : 0);
+
     await updateDoc(d.ref, { points: breakdown.points });
-    if (!byGroup[pred.groupId]) byGroup[pred.groupId] = [];
-    byGroup[pred.groupId].push({ uid: pred.userId, points: breakdown.points });
+
+    if (pointsDelta !== 0 || exactDelta !== 0) {
+      if (!byGroup[pred.groupId]) byGroup[pred.groupId] = [];
+      byGroup[pred.groupId].push({
+        uid: pred.userId,
+        pointsDelta,
+        exactDelta,
+      });
+    }
   }
 
-  // Update member scores per group
+  // Update member scores + exact-score counters per group
   for (const [groupId, entries] of Object.entries(byGroup)) {
     const batch = writeBatch(db);
-    for (const { uid, points } of entries) {
-      if (points > 0) {
-        const memberRef = doc(db, "groups", groupId, "members", uid);
-        batch.update(memberRef, { score: increment(points) });
-      }
+    for (const { uid, pointsDelta, exactDelta } of entries) {
+      const memberRef = doc(db, "groups", groupId, "members", uid);
+      const update: Record<string, ReturnType<typeof increment>> = {};
+      if (pointsDelta !== 0) update.score = increment(pointsDelta);
+      if (exactDelta !== 0) update.exactScores = increment(exactDelta);
+      if (Object.keys(update).length > 0) batch.update(memberRef, update);
     }
     await batch.commit();
   }
@@ -388,7 +420,7 @@ export async function getRanking(groupId: string): Promise<RankingEntry[]> {
     displayName: m.displayName,
     photoURL: m.photoURL,
     score: m.score,
-    exactScores: 0,
+    exactScores: m.exactScores ?? 0,
     correctWinners: 0,
   }));
 }
