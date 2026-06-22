@@ -40,7 +40,7 @@ const statusOptions = [
   { value: "all", label: "Todas" },
   { value: "scheduled", label: "Próximas" },
   { value: "live", label: "Ao vivo" },
-  { value: "finished", label: "Finalizados" },
+  { value: "finished", label: "Encerradas" },
 ];
 
 const GroupDetailPage = () => {
@@ -71,13 +71,20 @@ const GroupDetailPage = () => {
     "scheduled",
   );
 
-  const matchesFiltered = (matchesByPhase[tabPhase] ?? []).filter((m) => {
-    if (selectedStatus === "all") {
-      return true;
-    }
+  const matchesFiltered = (matchesByPhase[tabPhase] ?? [])
+    .filter((m) => {
+      if (selectedStatus === "all") {
+        return true;
+      }
 
-    return m.status === selectedStatus;
-  });
+      return m.status === selectedStatus;
+    })
+    .sort((a, b) => {
+      if (selectedStatus === "finished") {
+        return b.startTime.getTime() - a.startTime.getTime();
+      }
+      return a.startTime.getTime() - b.startTime.getTime();
+    });
 
   const handleSavePrediction = useCallback(
     async (matchId: string, home: number, away: number, startTime: Date) => {

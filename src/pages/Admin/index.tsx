@@ -293,6 +293,7 @@ function GroupsTab() {
 function MatchesTab() {
   const { matchesByPhase } = useMatches();
   const [phase, setPhase] = useState("group_stage");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   const [scoreDialog, setScoreDialog] = useState<Match | null>(null);
   const [homeScore, setHomeScore] = useState("");
@@ -376,6 +377,25 @@ function MatchesTab() {
     (p) => (matchesByPhase[p]?.length ?? 0) > 0,
   );
 
+  const statusOptions = [
+    { value: "all", label: "Todas" },
+    { value: "scheduled", label: "Próximas" },
+    { value: "live", label: "Ao vivo" },
+    { value: "finished", label: "Encerradas" },
+  ];
+
+  const matchesFiltered = (matchesByPhase[phase] ?? [])
+    .filter((m) => {
+      if (selectedStatus === "all") return true;
+      return m.status === selectedStatus;
+    })
+    .sort((a, b) => {
+      if (selectedStatus === "finished") {
+        return b.startTime.getTime() - a.startTime.getTime();
+      }
+      return a.startTime.getTime() - b.startTime.getTime();
+    });
+
   return (
     <Box>
       <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
@@ -412,8 +432,23 @@ function MatchesTab() {
         ))}
       </Tabs>
 
+      <FormControl size="small" sx={{ mb: 2, minWidth: 160 }}>
+        <InputLabel>Status</InputLabel>
+        <Select
+          value={selectedStatus}
+          label="Status"
+          onChange={(e) => setSelectedStatus(e.target.value)}
+        >
+          {statusOptions.map((option) => (
+            <MenuItem key={option.value} value={option.value}>
+              {option.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
       <Stack spacing={1}>
-        {(matchesByPhase[phase] ?? []).map((m) => (
+        {matchesFiltered.map((m) => (
           <Card
             key={m.id}
             elevation={0}
