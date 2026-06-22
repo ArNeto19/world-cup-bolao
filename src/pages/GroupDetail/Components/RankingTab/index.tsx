@@ -6,7 +6,10 @@ import {
   CardContent,
   Stack,
   Avatar,
+  Chip,
+  Tooltip,
 } from "@mui/material";
+import GpsFixedIcon from "@mui/icons-material/GpsFixed";
 
 import { GroupMember } from "../../../../types";
 
@@ -78,6 +81,15 @@ const RankingTab = ({
                 </Typography>
               )}
             </Typography>
+            <Tooltip title="Placares exatos acertados (critério de desempate)">
+              <Chip
+                icon={<GpsFixedIcon sx={{ fontSize: 13 }} />}
+                label={m.exactScores ?? 0}
+                size="small"
+                variant="outlined"
+                sx={{ fontSize: 11, height: 24, flexShrink: 0 }}
+              />
+            </Tooltip>
             <Box sx={{ textAlign: "right", flexShrink: 0 }}>
               <Typography
                 fontWeight={800}
