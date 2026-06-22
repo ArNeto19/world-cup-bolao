@@ -26,6 +26,7 @@ export interface GroupMember {
   displayName: string;
   photoURL?: string;
   score: number;
+  exactScores: number;
   joinedAt: Date;
 }
 

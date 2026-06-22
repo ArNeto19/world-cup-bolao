@@ -54,10 +54,20 @@ const Layout = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
-  const isPlayer = user?.role === "player" || user?.role === "admin";
+  const isPlayer = user?.role === "player";
+  const isAdmin = user?.role === "admin";
 
-  // Pending users only see home
-  const visibleNavItems = isPlayer ? navItems : navItems.slice(0, 1);
+  const visibleNavItems = isPlayer || isAdmin ? navItems : navItems.slice(0, 1);
+  let bottomNavItems = visibleNavItems;
+
+  if (isPlayer) {
+    bottomNavItems = navItems;
+  } else if (isAdmin) {
+    bottomNavItems = [
+      ...navItems.slice(0, 2),
+      { label: "Admin", path: "/admin", icon: <AdminPanelSettingsIcon /> },
+    ];
+  }
 
   const handleNav = (path: string) => {
     navigate(path);
@@ -65,7 +75,7 @@ const Layout = () => {
   };
 
   // Bottom nav value: match by prefix
-  const bottomNavValue = visibleNavItems.findIndex((n) =>
+  const bottomNavValue = bottomNavItems.findIndex((n) =>
     n.path === "/"
       ? location.pathname === "/"
       : location.pathname.startsWith(n.path),
@@ -360,10 +370,10 @@ const Layout = () => {
         >
           <BottomNavigation
             value={bottomNavValue}
-            onChange={(_, v) => handleNav(visibleNavItems[v]?.path ?? "/")}
+            onChange={(_, v) => handleNav(bottomNavItems[v]?.path ?? "/")}
             sx={{ bgcolor: "background.paper", height: 56 }}
           >
-            {visibleNavItems.map((item) => (
+            {bottomNavItems.map((item) => (
               <BottomNavigationAction
                 key={item.path}
                 label={item.label}
