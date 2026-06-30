@@ -6,17 +6,27 @@ import {
   Chip,
   Stack,
   Avatar,
+  Tooltip,
 } from "@mui/material";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { useAuth } from "../../../../store/AuthContext";
 import { getMatchPredictions } from "../../../../services/firestoreService";
-import { Prediction } from "../../../../types";
+import { Prediction, Team } from "../../../../types";
 
 const OtherPredictions = ({
   matchId,
   groupId,
+  homeTeam,
+  awayTeam,
+  actualQualified,
+  isKnockout,
 }: {
   matchId: string;
   groupId: string;
+  homeTeam?: Team;
+  awayTeam?: Team;
+  actualQualified?: "home" | "away";
+  isKnockout?: boolean;
 }) => {
   const { user } = useAuth();
   const [preds, setPreds] = useState<Prediction[]>([]);
@@ -39,39 +49,62 @@ const OtherPredictions = ({
 
   return (
     <Stack spacing={0.5} sx={{ mt: 1 }}>
-      {preds.map((p) => (
-        <Box
-          key={p.userId}
-          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-        >
-          <Avatar
+      {preds.map((p) => {
+        const correctQualifiedPred = actualQualified === p.qualifiedTeam;
+
+        return (
+          <Box
+            key={p.userId}
             sx={{
-              width: 20,
-              height: 20,
-              fontSize: 10,
-              bgcolor: "primary.dark",
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              flexWrap: "wrap",
             }}
           >
-            {p.username.charAt(0).toUpperCase()}
-          </Avatar>
-          <Typography variant="caption" flex={1} noWrap>
-            {p.username}
-          </Typography>
-          <Chip
-            label={`${p.homeScore} × ${p.awayScore}`}
-            size="small"
-            sx={{ fontSize: 10, height: 18 }}
-          />
-          {p.points !== undefined && (
+            <Avatar
+              sx={{
+                width: 20,
+                height: 20,
+                fontSize: 10,
+                bgcolor: "primary.dark",
+              }}
+            >
+              {p.username.charAt(0).toUpperCase()}
+            </Avatar>
+            <Typography variant="caption" flex={1} noWrap>
+              {p.username}
+            </Typography>
             <Chip
-              label={`+${p.points}`}
+              label={`${p.homeScore} × ${p.awayScore}`}
               size="small"
-              color="secondary"
               sx={{ fontSize: 10, height: 18 }}
             />
-          )}
-        </Box>
-      ))}
+            {isKnockout && p.qualifiedTeam && (homeTeam || awayTeam) && (
+              <Tooltip title="Equipe escolhida para se classificar">
+                <Chip
+                  icon={<EmojiEventsIcon sx={{ fontSize: 11 }} />}
+                  label={
+                    p.qualifiedTeam === "home" ? homeTeam?.name : awayTeam?.name
+                  }
+                  size="small"
+                  variant={correctQualifiedPred ? "filled" : "outlined"}
+                  color="secondary"
+                  sx={{ fontSize: 10, height: 18 }}
+                />
+              </Tooltip>
+            )}
+            {p.points !== undefined && (
+              <Chip
+                label={`+${p.points}`}
+                size="small"
+                color="secondary"
+                sx={{ fontSize: 10, height: 18 }}
+              />
+            )}
+          </Box>
+        );
+      })}
     </Stack>
   );
 };

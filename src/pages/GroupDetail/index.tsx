@@ -33,6 +33,7 @@ import {
   subscribeGroups,
 } from "../../services/firestoreService";
 import { BolaoGroup, GroupMember, Prediction, MatchStatus } from "../../types";
+import { getInitialPhase } from "../../utils";
 import { PHASE_LABELS, PHASE_ORDER } from "../../data/matches";
 import { useNow } from "../../hooks";
 
@@ -70,6 +71,18 @@ const GroupDetailPage = () => {
   const [selectedStatus, setSelectedStatus] = useState<MatchStatus | string>(
     "scheduled",
   );
+  const [userPickedPhase, setUserPickedPhase] = useState(false);
+
+  // Auto-advance to the next non-finished phase once match data is available,
+  // but only if the user hasn't manually picked a phase tab themselves.
+  useEffect(() => {
+    const availablePhases = PHASE_ORDER.filter(
+      (p) => (matchesByPhase[p]?.length ?? 0) > 0,
+    );
+    if (userPickedPhase || availablePhases.length === 0) return;
+    setTabPhase(getInitialPhase(availablePhases, matchesByPhase));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchesByPhase, userPickedPhase]);
 
   const matchesFiltered = (matchesByPhase[tabPhase] ?? [])
     .filter((m) => {
@@ -87,7 +100,13 @@ const GroupDetailPage = () => {
     });
 
   const handleSavePrediction = useCallback(
-    async (matchId: string, home: number, away: number, startTime: Date) => {
+    async (
+      matchId: string,
+      home: number,
+      away: number,
+      startTime: Date,
+      qualifiedTeam?: "home" | "away",
+    ) => {
       if (!user || !groupId) {
         return;
       }
@@ -109,6 +128,7 @@ const GroupDetailPage = () => {
           groupId,
           homeScore: home,
           awayScore: away,
+          qualifiedTeam,
           submittedAt: new Date(),
           username: user.displayName,
         };
@@ -238,7 +258,10 @@ const GroupDetailPage = () => {
         <>
           <Tabs
             value={tabPhase}
-            onChange={(_, v) => setTabPhase(v)}
+            onChange={(_, v) => {
+              setTabPhase(v);
+              setUserPickedPhase(true);
+            }}
             variant="scrollable"
             scrollButtons="auto"
             sx={{ mb: 2, mx: { xs: -1.5, sm: 0 } }}

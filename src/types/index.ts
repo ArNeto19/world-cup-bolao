@@ -60,6 +60,8 @@ export interface Match {
   status: MatchStatus;
   homeScore?: number;
   awayScore?: number;
+  /** Set by the admin when finishing a knockout-stage match (not used in group_stage) */
+  qualifiedTeam?: "home" | "away";
 }
 
 // ─── Prediction ──────────────────────────────────────────────────────────────
@@ -70,6 +72,12 @@ export interface Prediction {
   groupId: string;
   homeScore: number;
   awayScore: number;
+  /**
+   * Which team the user picked to advance to the next round.
+   * Only relevant for knockout-stage matches (phase !== 'group_stage').
+   * Auto-derived from the score when it's not a draw; user-selected when it is.
+   */
+  qualifiedTeam?: "home" | "away";
   points?: number;
   submittedAt: Date;
   updatedAt?: Date;
@@ -82,6 +90,8 @@ export interface ScoreBreakdown {
   goalDiff: boolean;
   winner: boolean;
   draw: boolean;
+  /** True when the user's qualifiedTeam pick matches the match's actual qualifiedTeam */
+  qualifiedBonus: boolean;
   points: number;
 }
 

@@ -342,15 +342,20 @@ export async function updateMatchScore(
   homeScore: number,
   awayScore: number,
   status: "live" | "finished",
+  qualifiedTeam?: "home" | "away",
 ): Promise<void> {
-  await updateDoc(doc(db, "matches", matchId), {
-    homeScore,
-    awayScore,
-    status,
-  });
+  const updateData: Record<string, unknown> = { homeScore, awayScore, status };
+  if (qualifiedTeam !== undefined) updateData.qualifiedTeam = qualifiedTeam;
+
+  await updateDoc(doc(db, "matches", matchId), updateData);
 
   if (status === "finished") {
-    await recalcGroupScoresForMatch(matchId, homeScore, awayScore);
+    await recalcGroupScoresForMatch(
+      matchId,
+      homeScore,
+      awayScore,
+      qualifiedTeam,
+    );
   }
 }
 
@@ -359,6 +364,7 @@ export async function recalcGroupScoresForMatch(
   matchId: string,
   actualHome: number,
   actualAway: number,
+  actualQualifiedTeam?: "home" | "away",
 ): Promise<void> {
   const predsSnap = await getDocs(
     query(collection(db, "predictions"), where("matchId", "==", matchId)),
@@ -376,16 +382,24 @@ export async function recalcGroupScoresForMatch(
       pred.awayScore,
       actualHome,
       actualAway,
+      pred.qualifiedTeam,
+      actualQualifiedTeam,
     );
 
     // Support re-running this after an admin score correction: compare against
     // the previously stored points/exactScore so we only apply the difference.
+    // `wasExact` is stored explicitly (rather than inferred from points===10)
+    // since the qualified-team bonus can also push total points to 10+.
     const oldPoints = pred.points ?? 0;
-    const oldWasExact = oldPoints === 10;
+    const oldWasExact =
+      (pred as Prediction & { wasExact?: boolean }).wasExact ?? false;
     const pointsDelta = breakdown.points - oldPoints;
     const exactDelta = (breakdown.exactScore ? 1 : 0) - (oldWasExact ? 1 : 0);
 
-    await updateDoc(d.ref, { points: breakdown.points });
+    await updateDoc(d.ref, {
+      points: breakdown.points,
+      wasExact: breakdown.exactScore,
+    });
 
     if (pointsDelta !== 0 || exactDelta !== 0) {
       if (!byGroup[pred.groupId]) byGroup[pred.groupId] = [];
