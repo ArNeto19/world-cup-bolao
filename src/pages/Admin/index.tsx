@@ -60,7 +60,7 @@ import { useMatches } from "../../store/MatchesContext";
 import { BolaoGroup, Match, Team, User } from "../../types";
 import { PHASE_LABELS, PHASE_ORDER } from "../../data/matches";
 import { ALL_TEAMS } from "../../constants";
-import { deriveQualifiedTeam } from "../../utils";
+import { deriveQualifiedTeam, getInitialPhase } from "../../utils";
 
 // ─── Groups tab ───────────────────────────────────────────────────────────────
 function GroupsTab() {
@@ -297,6 +297,17 @@ function MatchesTab() {
   const { matchesByPhase } = useMatches();
   const [phase, setPhase] = useState("group_stage");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [userPickedPhase, setUserPickedPhase] = useState(false);
+
+  // Auto-advance to the next non-finished phase once match data loads,
+  // but only if the admin hasn't manually picked a phase tab themselves.
+  useEffect(() => {
+    const availablePhases = PHASE_ORDER.filter(
+      (p) => (matchesByPhase[p]?.length ?? 0) > 0,
+    );
+    if (userPickedPhase || availablePhases.length === 0) return;
+    setPhase(getInitialPhase(availablePhases, matchesByPhase));
+  }, [matchesByPhase, userPickedPhase]);
 
   const [scoreDialog, setScoreDialog] = useState<Match | null>(null);
   const [homeScore, setHomeScore] = useState("");
@@ -447,7 +458,10 @@ function MatchesTab() {
 
       <Tabs
         value={phase}
-        onChange={(_, v) => setPhase(v)}
+        onChange={(_, v) => {
+          setPhase(v);
+          setUserPickedPhase(true);
+        }}
         variant="scrollable"
         scrollButtons="auto"
         sx={{ mb: 2 }}

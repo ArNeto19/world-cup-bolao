@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -23,7 +23,7 @@ import ClearIcon from "@mui/icons-material/Clear";
 import { TeamFlag } from "../../components/TeamFlag";
 
 import { useMatches } from "../../store/MatchesContext";
-import { normaliseString } from "../../utils";
+import { normaliseString, getInitialPhase } from "../../utils";
 import { PHASE_LABELS, PHASE_ORDER } from "../../data/matches";
 
 const MatchesPage = () => {
@@ -32,6 +32,19 @@ const MatchesPage = () => {
   const [search, setSearch] = useState("");
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const phases = PHASE_ORDER.filter(
+    (p) => (matchesByPhase[p]?.length ?? 0) > 0,
+  );
+
+  // Auto-advance to the next non-finished phase once data loads / changes,
+  // but only if the user hasn't manually picked a tab themselves.
+  const [userPickedPhase, setUserPickedPhase] = useState(false);
+  useEffect(() => {
+    if (userPickedPhase || phases.length === 0) return;
+    setPhase(getInitialPhase(phases, matchesByPhase));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phases.join(","), matchesByPhase]);
 
   const query = normaliseString(search);
 
@@ -46,10 +59,6 @@ const MatchesPage = () => {
         m.awayTeam.code.toLowerCase().includes(query),
     );
   }, [query, matches, matchesByPhase, phase]);
-
-  const phases = PHASE_ORDER.filter(
-    (p) => (matchesByPhase[p]?.length ?? 0) > 0,
-  );
 
   if (loading) {
     return (
@@ -98,7 +107,10 @@ const MatchesPage = () => {
       {!query && (
         <Tabs
           value={phase}
-          onChange={(_, v) => setPhase(v)}
+          onChange={(_, v) => {
+            setPhase(v);
+            setUserPickedPhase(true);
+          }}
           variant="scrollable"
           scrollButtons="auto"
           sx={{ mb: 2, mx: { xs: -1.5, md: 0 } }}
