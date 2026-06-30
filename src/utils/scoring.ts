@@ -5,14 +5,23 @@ import { MatchStatus, ScoreBreakdown } from "../types";
  * Rules (highest matching condition wins — no stacking):
  *   10pts — exact score
  *    5pts — correct goal difference
- *    2pts — correct winner
- *    2pts — correct draw
+ *    4pts — correct draw
+ *    2pts (+1 per exact side) — correct winner
+ *
+ * Knockout-stage bonus (independent of the above, always additive):
+ *    +2pts — predicted the correct team to advance ("qualifiedTeam")
+ *
+ * The qualified-team bonus applies even when the score prediction itself
+ * scores 0 points — e.g. predicting a draw but correctly picking who advances
+ * on penalties still earns the +2 bonus.
  */
 export function calculateScore(
   predHome: number,
   predAway: number,
   actualHome: number,
   actualAway: number,
+  predQualifiedTeam?: "home" | "away",
+  actualQualifiedTeam?: "home" | "away",
 ): ScoreBreakdown {
   const exactScore = predHome === actualHome && predAway === actualAway;
   const exactHome = predHome === actualHome;
@@ -43,7 +52,28 @@ export function calculateScore(
     points = 2 + (exactHome ? 1 : 0) + (exactAway ? 1 : 0);
   }
 
-  return { exactScore, goalDiff, winner, draw, points };
+  // Knockout-stage qualified-team bonus — independent of score points
+  const qualifiedBonus =
+    predQualifiedTeam !== undefined &&
+    actualQualifiedTeam !== undefined &&
+    predQualifiedTeam === actualQualifiedTeam;
+
+  if (qualifiedBonus) points += 2;
+
+  return { exactScore, goalDiff, winner, draw, qualifiedBonus, points };
+}
+
+/**
+ * Derives the qualified team from a score prediction.
+ * Returns undefined for a draw — the user must choose explicitly in that case.
+ */
+export function deriveQualifiedTeam(
+  homeScore: number,
+  awayScore: number,
+): "home" | "away" | undefined {
+  if (homeScore > awayScore) return "home";
+  if (awayScore > homeScore) return "away";
+  return undefined;
 }
 
 /**

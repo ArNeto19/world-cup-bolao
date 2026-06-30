@@ -87,7 +87,13 @@ const GroupDetailPage = () => {
     });
 
   const handleSavePrediction = useCallback(
-    async (matchId: string, home: number, away: number, startTime: Date) => {
+    async (
+      matchId: string,
+      home: number,
+      away: number,
+      startTime: Date,
+      qualifiedTeam?: "home" | "away",
+    ) => {
       if (!user || !groupId) {
         return;
       }
@@ -109,6 +115,7 @@ const GroupDetailPage = () => {
           groupId,
           homeScore: home,
           awayScore: away,
+          qualifiedTeam,
           submittedAt: new Date(),
           username: user.displayName,
         };

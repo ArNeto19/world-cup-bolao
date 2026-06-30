@@ -30,6 +30,8 @@ import {
   IconButton,
   Tooltip,
   Autocomplete,
+  ToggleButton,
+  ToggleButtonGroup,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
@@ -58,6 +60,7 @@ import { useMatches } from "../../store/MatchesContext";
 import { BolaoGroup, Match, Team, User } from "../../types";
 import { PHASE_LABELS, PHASE_ORDER } from "../../data/matches";
 import { ALL_TEAMS } from "../../constants";
+import { deriveQualifiedTeam } from "../../utils";
 
 // ─── Groups tab ───────────────────────────────────────────────────────────────
 function GroupsTab() {
@@ -300,6 +303,9 @@ function MatchesTab() {
   const [awayScore, setAwayScore] = useState("");
   const [status, setStatus] = useState<"live" | "finished">("live");
   const [savingScore, setSavingScore] = useState(false);
+  const [qualifiedTeam, setQualifiedTeam] = useState<
+    "home" | "away" | undefined
+  >(undefined);
 
   const [teamsDialog, setTeamsDialog] = useState<Match | null>(null);
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
@@ -319,6 +325,7 @@ function MatchesTab() {
     setStatus(
       m.status === "live" || m.status === "finished" ? m.status : "live",
     );
+    setQualifiedTeam(m.qualifiedTeam);
   };
 
   const openTeams = (m: Match) => {
@@ -327,14 +334,37 @@ function MatchesTab() {
     setAwayTeam(ALL_TEAMS.find((t) => t.code === m.awayTeam.code) ?? null);
   };
 
+  const isKnockoutMatch = scoreDialog && scoreDialog.phase !== "group_stage";
+  const scoreDialogIsDraw =
+    homeScore !== "" &&
+    awayScore !== "" &&
+    parseInt(homeScore, 10) === parseInt(awayScore, 10);
+
   const handleSaveScore = async () => {
     if (!scoreDialog) return;
     const h = parseInt(homeScore, 10);
     const a = parseInt(awayScore, 10);
     if (isNaN(h) || isNaN(a)) return;
+    if (
+      status === "finished" &&
+      isKnockoutMatch &&
+      qualifiedTeam === undefined
+    ) {
+      setSnack({
+        msg: "Selecione qual equipe se classificou.",
+        type: "error",
+      });
+      return;
+    }
     setSavingScore(true);
     try {
-      await updateMatchScore(scoreDialog.id, h, a, status);
+      await updateMatchScore(
+        scoreDialog.id,
+        h,
+        a,
+        status,
+        isKnockoutMatch ? qualifiedTeam : undefined,
+      );
       setSnack({
         msg:
           status === "finished"
@@ -379,7 +409,7 @@ function MatchesTab() {
 
   const statusOptions = [
     { value: "all", label: "Todas" },
-    { value: "scheduled", label: "Próximas" },
+    { value: "scheduled", label: "Agendadas" },
     { value: "live", label: "Ao vivo" },
     { value: "finished", label: "Encerradas" },
   ];
@@ -581,7 +611,17 @@ function MatchesTab() {
               label={scoreDialog?.homeTeam.name}
               type="number"
               value={homeScore}
-              onChange={(e) => setHomeScore(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setHomeScore(value);
+                if (isKnockoutMatch && value !== "" && awayScore !== "") {
+                  const derived = deriveQualifiedTeam(
+                    parseInt(value, 10),
+                    parseInt(awayScore, 10),
+                  );
+                  if (derived !== undefined) setQualifiedTeam(derived);
+                }
+              }}
               inputProps={{ min: 0 }}
               size="small"
               sx={{ flex: 1 }}
@@ -591,7 +631,17 @@ function MatchesTab() {
               label={scoreDialog?.awayTeam.name}
               type="number"
               value={awayScore}
-              onChange={(e) => setAwayScore(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setAwayScore(value);
+                if (isKnockoutMatch && homeScore !== "" && value !== "") {
+                  const derived = deriveQualifiedTeam(
+                    parseInt(homeScore, 10),
+                    parseInt(value, 10),
+                  );
+                  if (derived !== undefined) setQualifiedTeam(derived);
+                }
+              }}
               inputProps={{ min: 0 }}
               size="small"
               sx={{ flex: 1 }}
@@ -608,6 +658,45 @@ function MatchesTab() {
               <MenuItem value="finished">Encerrado (calcula pontos)</MenuItem>
             </Select>
           </FormControl>
+          {isKnockoutMatch && (
+            <Box sx={{ mt: 2 }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "block", mb: 0.5 }}
+              >
+                Equipe classificada
+                {scoreDialogIsDraw ? " (obrigatório em caso de empate)" : ""}
+              </Typography>
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                fullWidth
+                value={qualifiedTeam ?? null}
+                onChange={(_, v) => {
+                  if (v !== null) setQualifiedTeam(v);
+                }}
+                disabled={
+                  !scoreDialogIsDraw && homeScore !== "" && awayScore !== ""
+                }
+              >
+                <ToggleButton value="home" sx={{ fontSize: 12, gap: 0.5 }}>
+                  <TeamFlag
+                    countryCode={scoreDialog?.homeTeam.flagCode ?? "TBD"}
+                    size={14}
+                  />
+                  {scoreDialog?.homeTeam.name}
+                </ToggleButton>
+                <ToggleButton value="away" sx={{ fontSize: 12, gap: 0.5 }}>
+                  <TeamFlag
+                    countryCode={scoreDialog?.awayTeam.flagCode ?? "TBD"}
+                    size={14}
+                  />
+                  {scoreDialog?.awayTeam.name}
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+          )}
           {status === "finished" && (
             <Alert severity="warning" sx={{ mt: 2, fontSize: 12 }}>
               As pontuações serão recalculadas em todos os grupos.
