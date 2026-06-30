@@ -81,9 +81,6 @@ const MatchCard = ({
   const isKnockout = match.phase !== "group_stage";
   const correctQualifiedPred =
     match.qualifiedTeam && match.qualifiedTeam === prediction?.qualifiedTeam;
-  const points = prediction?.points
-    ? prediction.points + (correctQualifiedPred ? 2 : 0)
-    : 0;
 
   const draftHomeNum = draft ? parseInt(draft.home, 10) : NaN;
   const draftAwayNum = draft ? parseInt(draft.away, 10) : NaN;
@@ -370,7 +367,7 @@ const MatchCard = ({
             )}
             {isFinished && prediction?.points !== undefined && (
               <Chip
-                label={`+${points} pts`}
+                label={`+${prediction.points} pts`}
                 size="small"
                 color="secondary"
                 sx={{ fontWeight: 800, fontSize: 11 }}

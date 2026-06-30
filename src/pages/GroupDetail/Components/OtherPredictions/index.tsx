@@ -51,7 +51,6 @@ const OtherPredictions = ({
     <Stack spacing={0.5} sx={{ mt: 1 }}>
       {preds.map((p) => {
         const correctQualifiedPred = actualQualified === p.qualifiedTeam;
-        const points = p.points ? p.points + (correctQualifiedPred ? 2 : 0) : undefined;
 
         return (
           <Box
@@ -95,9 +94,9 @@ const OtherPredictions = ({
                 />
               </Tooltip>
             )}
-            {points !== undefined && (
+            {p.points !== undefined && (
               <Chip
-                label={`+${points}`}
+                label={`+${p.points}`}
                 size="small"
                 color="secondary"
                 sx={{ fontSize: 10, height: 18 }}
