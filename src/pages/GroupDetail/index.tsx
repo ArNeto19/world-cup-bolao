@@ -176,7 +176,7 @@ const GroupDetailPage = () => {
     if (matchesByPhase[tabPhase].some((m) => m.status === "live")) {
       setSelectedStatus("live");
     }
-  }, []);
+  }, [matchesByPhase, tabPhase]);
 
   if (loading) {
     return (
