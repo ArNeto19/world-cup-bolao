@@ -47,6 +47,7 @@ const MatchCard = ({
   saving,
   groupId,
   now,
+  groupAcceptingPredictions = true,
 }: {
   match: ReturnType<typeof useMatches>["matches"][0];
   prediction?: Prediction;
@@ -60,6 +61,7 @@ const MatchCard = ({
   saving: string | null;
   groupId: string;
   now: Date;
+  groupAcceptingPredictions?: boolean;
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -72,8 +74,10 @@ const MatchCard = ({
   >(undefined);
   const [expanded, setExpanded] = useState(false);
 
-  // Derived from `now` — will re-evaluate every 15 s as `now` changes
-  const canEdit = canEditPrediction(match.startTime, match.status, now);
+  // canEdit requires BOTH the time window to be open AND the group to be accepting predictions
+  const canEdit =
+    canEditPrediction(match.startTime, match.status, now) &&
+    groupAcceptingPredictions;
   const canSee = canSeePredictions(match.startTime, now);
   const isLive = match.status === "live";
   const isFinished = match.status === "finished";

@@ -19,6 +19,7 @@ export interface BolaoGroup {
   createdAt: Date;
   memberCount: number;
   isActive: boolean;
+  acceptingPredictions: boolean;
 }
 
 export interface GroupMember {

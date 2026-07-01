@@ -73,6 +73,7 @@ function GroupsTab() {
     name: "",
     description: "",
     isActive: true,
+    acceptingPredictions: true,
   });
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<BolaoGroup | null>(null);
@@ -91,7 +92,12 @@ function GroupsTab() {
 
   const openCreate = () => {
     setEditGroup(null);
-    setForm({ name: "", description: "", isActive: true });
+    setForm({
+      name: "",
+      description: "",
+      isActive: true,
+      acceptingPredictions: true,
+    });
     setDialog(true);
   };
   const openEdit = (g: BolaoGroup) => {
@@ -100,6 +106,7 @@ function GroupsTab() {
       name: g.name,
       description: g.description ?? "",
       isActive: g.isActive,
+      acceptingPredictions: g.acceptingPredictions ?? true,
     });
     setDialog(true);
   };
@@ -113,6 +120,7 @@ function GroupsTab() {
           name: form.name,
           description: form.description,
           isActive: form.isActive,
+          acceptingPredictions: form.acceptingPredictions,
         });
         setSnack({ msg: "Grupo atualizado!", type: "success" });
       } else {
@@ -120,6 +128,7 @@ function GroupsTab() {
           name: form.name,
           description: form.description,
           isActive: form.isActive,
+          acceptingPredictions: form.acceptingPredictions,
           createdBy: user.uid,
         });
         setSnack({ msg: "Grupo criado!", type: "success" });
@@ -188,12 +197,50 @@ function GroupsTab() {
                     variant="outlined"
                     sx={{ fontSize: 10 }}
                   />
-                  <Chip
-                    label={g.isActive ? "Ativo" : "Encerrado"}
-                    size="small"
-                    color={g.isActive ? "success" : "default"}
-                    sx={{ fontSize: 10 }}
-                  />
+                  <Tooltip title="Clique para alternar">
+                    <Chip
+                      label={
+                        g.isActive ? "Entradas abertas" : "Entradas encerradas"
+                      }
+                      size="small"
+                      color={g.isActive ? "success" : "default"}
+                      sx={{ fontSize: 10, cursor: "pointer" }}
+                      onClick={() =>
+                        updateGroup(g.id, { isActive: !g.isActive }).then(() =>
+                          setSnack({
+                            msg: `Entradas ${!g.isActive ? "abertas" : "encerradas"}.`,
+                            type: "success",
+                          }),
+                        )
+                      }
+                    />
+                  </Tooltip>
+                  <Tooltip title="Clique para alternar">
+                    <Chip
+                      label={
+                        (g.acceptingPredictions ?? true)
+                          ? "Palpites abertos"
+                          : "Palpites encerrados"
+                      }
+                      size="small"
+                      color={
+                        (g.acceptingPredictions ?? true) ? "primary" : "warning"
+                      }
+                      sx={{ fontSize: 10, cursor: "pointer" }}
+                      onClick={() =>
+                        updateGroup(g.id, {
+                          acceptingPredictions: !(
+                            g.acceptingPredictions ?? true
+                          ),
+                        }).then(() =>
+                          setSnack({
+                            msg: `Palpites ${!(g.acceptingPredictions ?? true) ? "abertos" : "encerrados"}.`,
+                            type: "success",
+                          }),
+                        )
+                      }
+                    />
+                  </Tooltip>
                 </Box>
               </Box>
               <IconButton size="small" onClick={() => openEdit(g)}>
@@ -247,6 +294,20 @@ function GroupsTab() {
                 />
               }
               label="Aceita novos participantes"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={form.acceptingPredictions}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      acceptingPredictions: e.target.checked,
+                    }))
+                  }
+                />
+              }
+              label="Aceita palpites"
             />
           </Stack>
         </DialogContent>
@@ -307,6 +368,7 @@ function MatchesTab() {
     );
     if (userPickedPhase || availablePhases.length === 0) return;
     setPhase(getInitialPhase(availablePhases, matchesByPhase));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchesByPhase, userPickedPhase]);
 
   const [scoreDialog, setScoreDialog] = useState<Match | null>(null);

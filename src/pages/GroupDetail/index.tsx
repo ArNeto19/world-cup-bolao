@@ -225,6 +225,24 @@ const GroupDetailPage = () => {
             size="small"
             variant="outlined"
           />
+          <Chip
+            label={
+              group?.isActive ? "Aberto para entrar" : "Entradas encerradas"
+            }
+            size="small"
+            color={group?.isActive ? "success" : "default"}
+            variant="outlined"
+          />
+          <Chip
+            label={
+              group?.acceptingPredictions
+                ? "Palpites abertos"
+                : "Palpites encerrados"
+            }
+            size="small"
+            color={group?.acceptingPredictions ? "primary" : "warning"}
+            variant="outlined"
+          />
           {myMember && (
             <>
               <Chip
@@ -237,6 +255,12 @@ const GroupDetailPage = () => {
           )}
         </Box>
       </Box>
+      {group && !group.acceptingPredictions && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Os palpites estão encerrados neste grupo. Nenhuma alteração pode ser
+          feita.
+        </Alert>
+      )}
 
       {/* Main tabs */}
       <Tabs value={mainTab} onChange={(_, v) => setMainTab(v)} sx={{ mb: 2 }}>
@@ -298,6 +322,7 @@ const GroupDetailPage = () => {
                 saving={saving}
                 groupId={groupId as string}
                 now={now}
+                groupAcceptingPredictions={group?.acceptingPredictions ?? true}
               />
             ))}
           </Stack>

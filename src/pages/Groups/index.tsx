@@ -183,13 +183,35 @@ const GroupsPage = () => {
                         {group.description}
                       </Typography>
                     )}
-                    <Chip
-                      icon={<GroupsIcon />}
-                      label={`${group.memberCount} participante${group.memberCount !== 1 ? "s" : ""}`}
-                      size="small"
-                      variant="outlined"
-                      sx={{ mb: 2 }}
-                    />
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 0.5,
+                        flexWrap: "wrap",
+                        mb: 2,
+                      }}
+                    >
+                      <Chip
+                        icon={<GroupsIcon />}
+                        label={`${group.memberCount} participante${group.memberCount !== 1 ? "s" : ""}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                      <Chip
+                        label={
+                          (group.acceptingPredictions ?? true)
+                            ? "Palpites abertos"
+                            : "Palpites encerrados"
+                        }
+                        size="small"
+                        color={
+                          (group.acceptingPredictions ?? true)
+                            ? "primary"
+                            : "warning"
+                        }
+                        variant="outlined"
+                      />
+                    </Box>
                   </CardContent>
                   <Box sx={{ p: 2, pt: 0, display: "flex", gap: 1 }}>
                     {joined && (

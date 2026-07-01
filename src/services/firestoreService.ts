@@ -83,6 +83,7 @@ export async function createGroup(
 ): Promise<string> {
   const ref = await addDoc(collection(db, "groups"), {
     ...data,
+    acceptingPredictions: data.acceptingPredictions ?? true,
     memberCount: 0,
     createdAt: serverTimestamp(),
   });
@@ -115,6 +116,7 @@ export async function getGroups(): Promise<BolaoGroup[]> {
         ...d.data(),
         id: d.id,
         createdAt: tsToDate(d.data().createdAt),
+        acceptingPredictions: d.data().acceptingPredictions ?? true,
       }) as BolaoGroup,
   );
 }
@@ -130,6 +132,7 @@ export function subscribeGroups(cb: (groups: BolaoGroup[]) => void) {
               ...d.data(),
               id: d.id,
               createdAt: tsToDate(d.data().createdAt),
+              acceptingPredictions: d.data().acceptingPredictions ?? true,
             }) as BolaoGroup,
         ),
       );
